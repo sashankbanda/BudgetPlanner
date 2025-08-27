@@ -32,6 +32,7 @@ class TransactionCreate(BaseModel):
 
 class Transaction(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str  # <-- Added to link transaction to a user
     type: Literal["income", "expense"]
     category: str
     amount: float
@@ -42,9 +43,11 @@ class Transaction(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     @classmethod
-    def from_create(cls, transaction_create: TransactionCreate):
-        month = transaction_create.date[:7]  # Extract YYYY-MM
+    def from_create(cls, transaction_create: TransactionCreate, user_id: str):
+        """Creates a Transaction instance, now requiring a user_id."""
+        month = transaction_create.date[:7]
         return cls(
+            user_id=user_id, # <-- Set the user_id
             type=transaction_create.type,
             category=transaction_create.category,
             amount=transaction_create.amount,
@@ -53,6 +56,7 @@ class Transaction(BaseModel):
             month=month
         )
 
+# --- Stats models remain the same ---
 class MonthlyStats(BaseModel):
     month: str
     income: float = 0.0

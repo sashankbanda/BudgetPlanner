@@ -1,10 +1,8 @@
 import axios from 'axios';
 
-// const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const BACKEND_URL = 'http://localhost:8000';
 const API = `${BACKEND_URL}/api`;
 
-// Create axios instance with default config
 const apiClient = axios.create({
   baseURL: API,
   timeout: 10000,
@@ -13,112 +11,72 @@ const apiClient = axios.create({
   }
 });
 
-// Request interceptor for logging
+// Interceptor to add the auth token to every request
 apiClient.interceptors.request.use(
   (config) => {
-    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
     return config;
   },
-  (error) => {
-    console.error('API Request Error:', error);
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor for error handling
+// Response interceptor for handling 401 Unauthorized errors
 apiClient.interceptors.response.use(
-  (response) => {
-    console.log(`API Response: ${response.status} ${response.config.url}`);
-    return response;
-  },
+  (response) => response,
   (error) => {
-    console.error('API Response Error:', error.response?.data || error.message);
-    
-    if (error.response?.status === 500) {
-      throw new Error('Server error. Please try again later.');
+    if (error.response?.status === 401) {
+        localStorage.removeItem('accessToken');
+        // Redirect to login only if not already on the login page
+        if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+        }
     }
-    
-    if (error.response?.status === 404) {
-      throw new Error('Resource not found.');
-    }
-    
     if (error.response?.data?.detail) {
       throw new Error(error.response.data.detail);
     }
-    
-    throw new Error(error.message || 'Network error occurred');
+    throw new Error(error.message || 'An unknown error occurred');
   }
 );
 
-// Transaction API functions
+// --- API Methods ---
+
+export const authAPI = {
+    login: async (email, password) => {
+        const formData = new URLSearchParams();
+        formData.append('username', email);
+        formData.append('password', password);
+        const response = await apiClient.post('/users/token', formData, {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        });
+        if (response.data.access_token) {
+            localStorage.setItem('accessToken', response.data.access_token);
+        }
+        return response.data;
+    },
+    signup: (email, password) => apiClient.post('/users/signup', { email, password }),
+    logout: () => localStorage.removeItem('accessToken')
+};
+
 export const transactionAPI = {
-  // Create new transaction
-  create: async (transactionData) => {
-    const response = await apiClient.post('/transactions/', transactionData);
-    return response.data;
-  },
-
-  // Get all transactions
-  getAll: async (params = {}) => {
-    const response = await apiClient.get('/transactions/', { params });
-    return response.data;
-  },
-
-  // Get transaction by ID
-  getById: async (id) => {
-    const response = await apiClient.get(`/transactions/${id}`);
-    return response.data;
-  },
-
-  // Delete transaction
-  delete: async (id) => {
-    const response = await apiClient.delete(`/transactions/${id}`);
-    return response.data;
-  }
+  create: (data) => apiClient.post('/transactions/', data).then(res => res.data),
+  getAll: (params = {}) => apiClient.get('/transactions/', { params }).then(res => res.data),
+  delete: (id) => apiClient.delete(`/transactions/${id}`).then(res => res.data)
 };
 
-// Statistics API functions
 export const statsAPI = {
-  // Get monthly statistics
-  getMonthlyStats: async () => {
-    const response = await apiClient.get('/stats/monthly');
-    return response.data;
-  },
-
-  // Get category statistics
-  getCategoryStats: async (type) => {
-    const response = await apiClient.get('/stats/categories', {
-      params: { type }
-    });
-    return response.data;
-  },
-
-  // Get trend statistics
-  getTrendStats: async () => {
-    const response = await apiClient.get('/stats/trends');
-    return response.data;
-  },
-
-  // Get current month statistics
-  getCurrentMonthStats: async () => {
-    const response = await apiClient.get('/stats/current-month');
-    return response.data;
-  }
+  getMonthlyStats: () => apiClient.get('/stats/monthly').then(res => res.data),
+  getCategoryStats: (type) => apiClient.get('/stats/categories', { params: { type } }).then(res => res.data),
+  getTrendStats: () => apiClient.get('/stats/trends').then(res => res.data),
+  getCurrentMonthStats: () => apiClient.get('/stats/current-month').then(res => res.data)
 };
 
-// Health check
-export const healthAPI = {
-  check: async () => {
-    const response = await apiClient.get('/health');
-    return response.data;
-  }
-};
-
-// Export default API object
 const api = {
+  auth: authAPI,
   transactions: transactionAPI,
   stats: statsAPI,
-  health: healthAPI
 };
 
 export default api;

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter # Corrected typo here
+from fastapi import FastAPI, APIRouter
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 import os
@@ -10,6 +10,7 @@ from database import db, client
 # Import route modules
 from routes.transactions import router as transactions_router
 from routes.stats import router as stats_router
+from routes.users import router as users_router
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -21,16 +22,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
-# This new lifespan function replaces the old startup and shutdown events
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Code to run on startup
     logger.info("Budget Planner API starting up...")
     try:
-        await db.transactions.create_index([("month", 1), ("type", 1)])
-        await db.transactions.create_index([("date", -1)])
-        await db.transactions.create_index([("category", 1), ("type", 1)])
+        # Updated indexes to include user_id for multi-tenancy
+        await db.transactions.create_index([("user_id", 1), ("month", 1), ("type", 1)])
+        await db.transactions.create_index([("user_id", 1), ("date", -1)])
+        await db.transactions.create_index([("user_id", 1), ("category", 1), ("type", 1)])
+        # Index for the new users collection
+        await db.users.create_index([("email", 1)], unique=True)
         logger.info("Database indexes created successfully")
     except Exception as e:
         logger.warning(f"Could not create indexes: {e}")
@@ -41,46 +43,41 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down Budget Planner API...")
     client.close()
 
-# Create the main app and pass in the lifespan handler
 app = FastAPI(lifespan=lifespan)
 
-# Create a router with the /api prefix
-api_router = APIRouter(prefix="/api")
+# --- CORS Configuration Update ---
+# Define the list of allowed origins
+allowed_origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://budgetflow-18.preview.emergentagent.com",
+    # Add your future Netlify URL here, e.g., "https://your-app-name.netlify.app"
+]
 
-# Health check endpoint
-@api_router.get("/")
-async def root():
-    return {"message": "Budget Planner API is running", "status": "healthy"}
+# Add the updated CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins, # Use the specific list
+    allow_credentials=True,
+    allow_methods=["*"], # Allows all methods (GET, POST, etc.)
+    allow_headers=["*"], # Allows all headers
+)
+# --- End of CORS Configuration Update ---
+
+
+api_router = APIRouter(prefix="/api")
 
 @api_router.get("/health")
 async def health_check():
     try:
-        # Test database connection
-        await db.transactions.count_documents({})
-        return {
-            "status": "healthy",
-            "database": "connected",
-            "message": "All systems operational"
-        }
+        await db.command('ping')
+        return {"status": "healthy", "database": "connected"}
     except Exception as e:
-        return {
-            "status": "unhealthy", 
-            "database": "disconnected",
-            "error": str(e)
-        }
+        return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
 
-# Include feature routers
+# Include all routers
+api_router.include_router(users_router)
 api_router.include_router(transactions_router)
 api_router.include_router(stats_router)
 
-# Include the main API router in the app
 app.include_router(api_router)
-
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
