@@ -9,7 +9,8 @@ class TransactionCreate(BaseModel):
     amount: float
     description: str = ""
     date: str  # Format: YYYY-MM-DD
-    
+    person: Optional[str] = None # <-- ADD THIS LINE: To store the person's name
+
     @validator('amount')
     def amount_must_be_positive(cls, v):
         if v <= 0:
@@ -32,28 +33,29 @@ class TransactionCreate(BaseModel):
 
 class Transaction(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    user_id: str  # <-- Added to link transaction to a user
+    user_id: str
     type: Literal["income", "expense"]
     category: str
     amount: float
     description: str = ""
     date: str  # Format: YYYY-MM-DD
     month: str  # Format: YYYY-MM
+    person: Optional[str] = None # <-- ADD THIS LINE
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     @classmethod
     def from_create(cls, transaction_create: TransactionCreate, user_id: str):
-        """Creates a Transaction instance, now requiring a user_id."""
         month = transaction_create.date[:7]
         return cls(
-            user_id=user_id, # <-- Set the user_id
+            user_id=user_id,
             type=transaction_create.type,
             category=transaction_create.category,
             amount=transaction_create.amount,
             description=transaction_create.description,
             date=transaction_create.date,
-            month=month
+            month=month,
+            person=transaction_create.person # <-- ADD THIS LINE
         )
 
 # --- Stats models remain the same ---

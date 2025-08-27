@@ -11,6 +11,7 @@ from database import db, client
 from routes.transactions import router as transactions_router
 from routes.stats import router as stats_router
 from routes.users import router as users_router
+from routes.people import router as people_router # <-- IMPORT NEW ROUTER
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -50,7 +51,7 @@ app = FastAPI(lifespan=lifespan)
 allowed_origins = [
     "http://localhost:3000",
     "http://localhost:3001",
-    "https://budgetflow-18.preview.emergentagent.com",
+    # The preview URL was removed in the new version.
     # Add your future Netlify URL here, e.g., "https://your-app-name.netlify.app"
 ]
 
@@ -77,6 +78,7 @@ async def health_check():
 
 # Include all routers
 api_router.include_router(users_router)
+api_router.include_router(people_router) # <-- ADD THE NEW ROUTER
 api_router.include_router(transactions_router)
 api_router.include_router(stats_router)
 

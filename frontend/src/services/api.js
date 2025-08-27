@@ -62,7 +62,16 @@ export const authAPI = {
 
 export const transactionAPI = {
   create: (data) => apiClient.post('/transactions/', data).then(res => res.data),
-  getAll: (params = {}) => apiClient.get('/transactions/', { params }).then(res => res.data),
+  
+  // UPDATED getAll function to accept a filters object
+  getAll: (filters = {}) => {
+    // Remove any null or undefined filter values before sending
+    const cleanFilters = Object.fromEntries(
+      Object.entries(filters).filter(([_, v]) => v != null && v !== '')
+    );
+    return apiClient.get('/transactions/', { params: cleanFilters }).then(res => res.data);
+  },
+
   delete: (id) => apiClient.delete(`/transactions/${id}`).then(res => res.data)
 };
 
@@ -73,10 +82,17 @@ export const statsAPI = {
   getCurrentMonthStats: () => apiClient.get('/stats/current-month').then(res => res.data)
 };
 
+export const peopleAPI = {
+  getAll: () => apiClient.get('/people').then(res => res.data)
+};
+
+
+
 const api = {
   auth: authAPI,
   transactions: transactionAPI,
   stats: statsAPI,
+  people: peopleAPI // <-- ADD THIS
 };
 
 export default api;

@@ -11,20 +11,17 @@
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
 
-    <!-- 
-      This is your new, personalized badge.
-      IMPORTANT: Remember to change the href to your actual GitHub profile URL.
-    -->
     <a
       id="custom-badge"
       target="_blank"
-      href="https://github.com/sashankbanda" 
+      href="https://github.com/sashankbanda"
       style="
         display: flex !important;
         align-items: center !important;
         position: fixed !important;
         bottom: 20px;
-        right: 20px;
+        left: 50%; /* <-- Changed from right: 20px */
+        transform: translateX(-50%); /* <-- Added to center the element */
         text-decoration: none;
         padding: 6px 12px;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif !important;
@@ -37,12 +34,11 @@
         color: #ffffff !important;
         transition: transform 0.2s ease-in-out;
       "
-      onmouseover="this.style.transform='scale(1.05)'"
-      onmouseout="this.style.transform='scale(1)'"
+      onmouseover="this.style.transform='translateX(-50%) scale(1.05)'"
+      onmouseout="this.style.transform='translateX(-50%) scale(1)'"
     >
       Made with 💖 sashankbanda
     </a>
 
-    <!-- The posthog analytics script has been removed as per the implicit request to remove the badge -->
-  </body>
+    </body>
 </html>
