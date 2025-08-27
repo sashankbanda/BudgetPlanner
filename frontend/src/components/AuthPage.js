@@ -60,11 +60,11 @@ const AuthPage = () => {
             <CardContent>
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <Label htmlFor="login-email">Email</Label>
+                  <Label htmlFor="login-email" className="text-gray-300">Email</Label>
                   <Input id="login-email" type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required className="glass-input" />
                 </div>
                 <div>
-                  <Label htmlFor="login-password">Password</Label>
+                  <Label htmlFor="login-password" className="text-gray-300">Password</Label>
                   <Input id="login-password" type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required className="glass-input" />
                 </div>
                 <Button type="submit" className="w-full glass-button neon-glow" disabled={loading}>
@@ -81,11 +81,11 @@ const AuthPage = () => {
             <CardContent>
               <form onSubmit={handleSignup} className="space-y-4">
                 <div>
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email" className="text-gray-300">Email</Label>
                   <Input id="signup-email" type="email" value={signupEmail} onChange={(e) => setSignupEmail(e.target.value)} required className="glass-input" />
                 </div>
                 <div>
-                  <Label htmlFor="signup-password">Password</Label>
+                  <Label htmlFor="signup-password" className="text-gray-300">Password</Label>
                   <Input id="signup-password" type="password" value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} required className="glass-input" />
                 </div>
                 <Button type="submit" className="w-full glass-button neon-glow" disabled={loading}>
