@@ -11,7 +11,9 @@ import sys
 import os
 
 # Backend URL from environment
-BACKEND_URL = "https://budgetflow-18.preview.emergentagent.com/api"
+# BACKEND_URL = "https://budgetflow-18.preview.emergentagent.com/api"
+# BACKEND_URL = "http://localhost:8000"
+BACKEND_URL = "http://localhost:8000/api"
 
 class BudgetPlannerTester:
     def __init__(self):
