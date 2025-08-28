@@ -51,7 +51,7 @@ app = FastAPI(lifespan=lifespan)
 allowed_origins = [
     "http://localhost:3000",
     "http://localhost:3001",
-    "https://allocash.netlify.app"
+    "https://allocash.netlify.app",
     "https://allocash.netlify.app/login"
     # The preview URL was removed in the new version.
     # Add your future Netlify URL here, e.g., "https://your-app-name.netlify.app"
