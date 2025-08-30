@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Literal
-from models.transaction import MonthlyStats, CategoryStats, TrendStats
+from models.transaction import MonthlyStats, CategoryStats, TrendStats, PersonStats
 from database import get_database
 from datetime import datetime
 from auth import get_current_user_id
