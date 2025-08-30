@@ -79,7 +79,8 @@ export const statsAPI = {
   getMonthlyStats: () => apiClient.get('/stats/monthly').then(res => res.data),
   getCategoryStats: (type) => apiClient.get('/stats/categories', { params: { type } }).then(res => res.data),
   getTrendStats: () => apiClient.get('/stats/trends').then(res => res.data),
-  getCurrentMonthStats: () => apiClient.get('/stats/current-month').then(res => res.data)
+  // ✨ RENAMED function and UPDATED URL here
+  getDashboardStats: () => apiClient.get('/stats/dashboard').then(res => res.data)
 };
 
 export const peopleAPI = {
@@ -92,7 +93,7 @@ const api = {
   auth: authAPI,
   transactions: transactionAPI,
   stats: statsAPI,
-  people: peopleAPI // <-- ADD THIS
+  people: peopleAPI
 };
 
 export default api;

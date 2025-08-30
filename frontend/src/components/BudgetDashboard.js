@@ -57,9 +57,10 @@ const BudgetDashboard = () => {
 
     const loadData = async () => {
         try {
-            const [transactionsData, currentStats, monthlyStats, incomeStats, expenseStats, trendStats, peopleData] = await Promise.all([
+            const [transactionsData, dashboardStats, monthlyStats, incomeStats, expenseStats, trendStats, peopleData] = await Promise.all([
                 api.transactions.getAll(filters),
-                api.stats.getCurrentMonthStats(),
+                // ✨ UPDATED this function call
+                api.stats.getDashboardStats(),
                 api.stats.getMonthlyStats(),
                 api.stats.getCategoryStats('income'),
                 api.stats.getCategoryStats('expense'),
@@ -69,7 +70,7 @@ const BudgetDashboard = () => {
 
             setTransactions(transactionsData);
             setPeople(peopleData);
-            setStats({ totalIncome: currentStats.total_income || 0, totalExpenses: currentStats.total_expenses || 0, balance: currentStats.balance || 0, transactionCount: currentStats.transaction_count || 0 });
+            setStats({ totalIncome: dashboardStats.total_income || 0, totalExpenses: dashboardStats.total_expenses || 0, balance: dashboardStats.balance || 0, transactionCount: dashboardStats.transaction_count || 0 });
             setChartData({ monthlyData: monthlyStats.map(item => ({...item})), incomeData: incomeStats, expenseData: expenseStats, trendData: trendStats });
         } catch (error) {
             console.error('Error loading data:', error);
