@@ -20,7 +20,8 @@ import api from '../services/api';
 import { incomeCategories, expenseCategories } from '../mock';
 
 const COLORS = { income: '#00ff88', expense: '#ff4757', electric: '#00bfff' };
-const personCategories = ["To Friends", "From Friends", "From Parents"];
+// ✨ FIX: Expanded this list to be more comprehensive for your logic.
+const personCategories = ["To Friends", "From Friends", "To Parents", "From Parents"];
 
 const BudgetDashboard = () => {
     const [transactions, setTransactions] = useState([]);
@@ -33,13 +34,11 @@ const BudgetDashboard = () => {
     const { toast } = useToast();
     const navigate = useNavigate();
 
-    // ✨ NEW: State for multi-account functionality
     const [accounts, setAccounts] = useState([]);
     const [selectedAccountId, setSelectedAccountId] = useState('all');
     const [isManageAccountsOpen, setIsManageAccountsOpen] = useState(false);
     const [newAccountName, setNewAccountName] = useState("");
 
-    // State for forms and dialogs
     const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -58,9 +57,19 @@ const BudgetDashboard = () => {
         person: '', newPerson: '', account_id: ''
     });
 
+    // ✨ NEW: useEffect hook for the "Smart Reset" logic.
+    // This watches for changes in the form's category field.
+    useEffect(() => {
+        // If the currently selected category is NOT in our list of person-specific categories...
+        if (!personCategories.includes(formData.category)) {
+            // ...then we automatically clear the 'person' field.
+            setFormData(prevData => ({ ...prevData, person: '' }));
+        }
+    }, [formData.category]); // This dependency means the code only runs when formData.category changes.
+
+
     const loadData = async () => {
         try {
-            // ✨ UPDATED: Fetch accounts and pass selectedAccountId to all data-fetching calls
             const [
                 accountsData, transactionsData, dashboardStats, monthlyStats,
                 incomeStats, expenseStats, trendStats, peopleData, peopleStatsData
@@ -90,12 +99,11 @@ const BudgetDashboard = () => {
         }
     };
     
-    // ✨ UPDATED: useEffect now re-fetches data when the selected account changes
     useEffect(() => {
         setLoading(true);
         const handler = setTimeout(() => {
             loadData();
-        }, 500); // Debounce API calls for filters
+        }, 500);
         return () => clearTimeout(handler);
     }, [filters, selectedAccountId]);
     
@@ -104,14 +112,12 @@ const BudgetDashboard = () => {
             type: 'expense', category: '', amount: '', description: '',
             date: new Date().toISOString().split('T')[0], customCategory: '',
             person: '', newPerson: '', 
-            // ✨ UPDATED: Default to the first account if it exists, otherwise empty
             account_id: accounts.length > 0 ? accounts[0].id : '' 
         });
         setEditingTransaction(null);
     };
 
     const handleFormSubmit = async () => {
-        // ✨ ADDED: Validation for account_id
         if (!formData.account_id) {
             return toast({ title: "Validation Error", description: "Please select an account for this transaction.", variant: "destructive" });
         }
@@ -132,7 +138,7 @@ const BudgetDashboard = () => {
             description: formData.description,
             date: formData.date,
             person: finalPerson || null,
-            account_id: formData.account_id // ✨ ADDED: Send account_id with the request
+            account_id: formData.account_id
         };
 
         try {
@@ -144,7 +150,7 @@ const BudgetDashboard = () => {
                 toast({ title: "Success", description: "Transaction added." });
             }
             setIsFormDialogOpen(false);
-            loadData(); // Reload all data to reflect changes
+            loadData();
         } catch (error) {
             console.error('Error submitting form:', error);
             toast({ title: "Error", description: error.message || "Failed to save transaction", variant: "destructive" });
@@ -176,7 +182,7 @@ const BudgetDashboard = () => {
         try {
             await api.transactions.delete(deletingTransactionId);
             toast({ title: "Success", description: "Transaction deleted." });
-            loadData(); // Reload data after deletion
+            loadData();
         } catch (error) {
             toast({ title: "Error", description: "Failed to delete transaction.", variant: "destructive" });
         } finally {
@@ -185,7 +191,6 @@ const BudgetDashboard = () => {
         }
     };
     
-    // ✨ NEW: Handlers for managing accounts
     const handleCreateAccount = async () => {
         if (!newAccountName.trim()) {
             return toast({ title: "Error", description: "Account name cannot be empty.", variant: "destructive" });
@@ -194,7 +199,6 @@ const BudgetDashboard = () => {
             const newAccount = await api.accounts.create({ name: newAccountName });
             toast({ title: "Success", description: "Account created." });
             setNewAccountName("");
-            // Optimistically update UI and select the new account
             setAccounts(prev => [...prev, newAccount]); 
             setSelectedAccountId(newAccount.id);
         } catch (error) {
@@ -206,11 +210,10 @@ const BudgetDashboard = () => {
         try {
             await api.accounts.delete(accountId);
             toast({ title: "Success", description: "Account and its transactions have been deleted." });
-            // If the deleted account was the selected one, switch back to "All Accounts"
             if (selectedAccountId === accountId) {
                 setSelectedAccountId('all');
             } else {
-                loadData(); // otherwise, just reload the data
+                loadData();
             }
         } catch (error) {
             toast({ title: "Error", description: "Failed to delete account.", variant: "destructive" });
@@ -233,6 +236,8 @@ const BudgetDashboard = () => {
     }, [transactions]);
 
     const pieColors = ['#00ff88', '#ff4757', '#00bfff', '#ffa502', '#2ed573', '#ff6348', '#70a1ff'];
+    
+    // ✨ FIX: This variable will now correctly show/hide the Person field based on the selected category.
     const showPersonField = personCategories.includes(formData.category);
 
     if (loading) {
@@ -255,7 +260,6 @@ const BudgetDashboard = () => {
                         <p className="text-gray-300 text-sm sm:text-base">Track your finances with futuristic precision</p>
                     </div>
                     <div className="flex items-center justify-center sm:justify-end gap-2 sm:gap-4 w-full sm:w-auto">
-                        {/* ✨ ADDED: Account Switcher */}
                         <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
                             <SelectTrigger className="glass-input w-[150px] sm:w-[180px]">
                                 <SelectValue placeholder="Select Account" />
@@ -268,7 +272,6 @@ const BudgetDashboard = () => {
                             </SelectContent>
                         </Select>
 
-                        {/* ✨ ADDED: Manage Accounts Button & Dialog */}
                         <Dialog open={isManageAccountsOpen} onOpenChange={setIsManageAccountsOpen}>
                             <DialogTrigger asChild>
                                 <Button variant="ghost" size="icon" className="glass-button">
@@ -317,79 +320,79 @@ const BudgetDashboard = () => {
                                 </DialogHeader>
                                 <div className="space-y-4">
                                      <div>
-                                        <Label>Account</Label>
-                                        <Select value={formData.account_id} onValueChange={(value) => setFormData(prev => ({ ...prev, account_id: value }))}>
-                                            <SelectTrigger className="glass-input"><SelectValue placeholder="Select an account..." /></SelectTrigger>
-                                            <SelectContent className="glass-effect border-0 text-white">
-                                                {accounts.map(acc => (
-                                                    <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div>
-                                        <Label>Type</Label>
-                                        <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value, category: '' }))}>
-                                            <SelectTrigger className="glass-input"><SelectValue /></SelectTrigger>
-                                            <SelectContent className="glass-effect border-0 text-white">
-                                                <SelectItem value="income" className="income-accent">Income</SelectItem>
-                                                <SelectItem value="expense" className="expense-accent">Expense</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div>
-                                        <Label>Category</Label>
-                                        <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
-                                            <SelectTrigger className="glass-input"><SelectValue placeholder="Select category" /></SelectTrigger>
-                                            <SelectContent className="glass-effect border-0 text-white">
-                                                {(formData.type === 'income' ? incomeCategories : expenseCategories).map(cat => (
-                                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    {formData.category === 'Custom' && (
-                                        <div>
-                                            <Label>Custom Category</Label>
-                                            <Input className="glass-input" value={formData.customCategory} onChange={(e) => setFormData(prev => ({ ...prev, customCategory: e.target.value }))} placeholder="Enter custom category" />
-                                        </div>
-                                    )}
-                                    {showPersonField && (
-                                        <>
-                                            <div>
-                                                <Label>Person</Label>
-                                                <Select value={formData.person} onValueChange={(value) => setFormData(prev => ({ ...prev, person: value }))}>
-                                                    <SelectTrigger className="glass-input"><SelectValue placeholder="Select person..." /></SelectTrigger>
-                                                    <SelectContent className="glass-effect border-0 text-white">
-                                                        {people.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                                                        <SelectItem value="add_new" className="electric-accent">+ Add New Person</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            {formData.person === 'add_new' && (
-                                                <div>
-                                                    <Label>New Person Name</Label>
-                                                    <Input className="glass-input" value={formData.newPerson} onChange={(e) => setFormData(prev => ({ ...prev, newPerson: e.target.value }))} placeholder="e.g., Alex, Mom..." />
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
-                                    <div>
-                                        <Label>Amount</Label>
-                                        <Input className="glass-input" type="number" step="0.01" min="0" value={formData.amount} onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))} placeholder="0.00" />
-                                    </div>
-                                    <div>
-                                        <Label>Description</Label>
-                                        <Input className="glass-input" value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} placeholder="Transaction description" />
-                                    </div>
-                                    <div>
-                                        <Label>Date</Label>
-                                        <Input className="glass-input" type="date" value={formData.date} onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))} />
-                                    </div>
-                                    <Button onClick={handleFormSubmit} className="w-full glass-button neon-glow">
-                                        {editingTransaction ? 'Save Changes' : 'Add Transaction'}
-                                    </Button>
-                                </div>
+                                         <Label>Account</Label>
+                                         <Select value={formData.account_id} onValueChange={(value) => setFormData(prev => ({ ...prev, account_id: value }))}>
+                                             <SelectTrigger className="glass-input"><SelectValue placeholder="Select an account..." /></SelectTrigger>
+                                             <SelectContent className="glass-effect border-0 text-white">
+                                                 {accounts.map(acc => (
+                                                     <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                                                 ))}
+                                             </SelectContent>
+                                         </Select>
+                                     </div>
+                                     <div>
+                                         <Label>Type</Label>
+                                         <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value, category: '' }))}>
+                                             <SelectTrigger className="glass-input"><SelectValue /></SelectTrigger>
+                                             <SelectContent className="glass-effect border-0 text-white">
+                                                 <SelectItem value="income" className="income-accent">Income</SelectItem>
+                                                 <SelectItem value="expense" className="expense-accent">Expense</SelectItem>
+                                             </SelectContent>
+                                         </Select>
+                                     </div>
+                                     <div>
+                                         <Label>Category</Label>
+                                         <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
+                                             <SelectTrigger className="glass-input"><SelectValue placeholder="Select category" /></SelectTrigger>
+                                             <SelectContent className="glass-effect border-0 text-white">
+                                                 {(formData.type === 'income' ? incomeCategories : expenseCategories).map(cat => (
+                                                     <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                                 ))}
+                                             </SelectContent>
+                                         </Select>
+                                     </div>
+                                     {formData.category === 'Custom' && (
+                                         <div>
+                                             <Label>Custom Category</Label>
+                                             <Input className="glass-input" value={formData.customCategory} onChange={(e) => setFormData(prev => ({ ...prev, customCategory: e.target.value }))} placeholder="Enter custom category" />
+                                         </div>
+                                     )}
+                                     {showPersonField && (
+                                         <>
+                                             <div>
+                                                 <Label>Person</Label>
+                                                 <Select value={formData.person} onValueChange={(value) => setFormData(prev => ({ ...prev, person: value }))}>
+                                                     <SelectTrigger className="glass-input"><SelectValue placeholder="Select person..." /></SelectTrigger>
+                                                     <SelectContent className="glass-effect border-0 text-white">
+                                                         {people.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                                                         <SelectItem value="add_new" className="electric-accent">+ Add New Person</SelectItem>
+                                                     </SelectContent>
+                                                 </Select>
+                                             </div>
+                                             {formData.person === 'add_new' && (
+                                                 <div>
+                                                     <Label>New Person Name</Label>
+                                                     <Input className="glass-input" value={formData.newPerson} onChange={(e) => setFormData(prev => ({ ...prev, newPerson: e.target.value }))} placeholder="e.g., Alex, Mom..." />
+                                                 </div>
+                                             )}
+                                         </>
+                                     )}
+                                     <div>
+                                         <Label>Amount</Label>
+                                         <Input className="glass-input" type="number" step="0.01" min="0" value={formData.amount} onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))} placeholder="0.00" />
+                                     </div>
+                                     <div>
+                                         <Label>Description</Label>
+                                         <Input className="glass-input" value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} placeholder="Transaction description" />
+                                     </div>
+                                     <div>
+                                         <Label>Date</Label>
+                                         <Input className="glass-input" type="date" value={formData.date} onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))} />
+                                     </div>
+                                     <Button onClick={handleFormSubmit} className="w-full glass-button neon-glow">
+                                         {editingTransaction ? 'Save Changes' : 'Add Transaction'}
+                                     </Button>
+                                 </div>
                             </DialogContent>
                         </Dialog>
                         <Button variant="ghost" size="icon" onClick={handleLogout} className="glass-button expense-glow"><LogOut className="w-5 h-5" /></Button>
@@ -397,7 +400,6 @@ const BudgetDashboard = () => {
                 </header>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    {/* Stats Cards */}
                     <Card className="glass-card stat-card">
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between">
@@ -453,26 +455,26 @@ const BudgetDashboard = () => {
                         <TabsTrigger value="transactions" className="glass-button data-[state=active]:electric-glow">Transactions</TabsTrigger>
                     </TabsList>
                     
-<TabsContent value="overview">
-                        <Card className="glass-card">
-                            <CardHeader><CardTitle className="electric-accent">Monthly Totals</CardTitle></CardHeader>
-                            <CardContent>
-                                <div className="chart-container">
-                                    <ResponsiveContainer width="100%" height={300}>
-                                        <BarChart data={chartData.monthlyData}>
-                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                                            <XAxis dataKey="month" stroke="#ffffff" />
-                                            <YAxis stroke="#ffffff" />
-                                            <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
-                                            <Legend />
-                                            <Bar dataKey="income" fill={COLORS.income} />
-                                            <Bar dataKey="expense" fill={COLORS.expense} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
+                    <TabsContent value="overview">
+                         <Card className="glass-card">
+                             <CardHeader><CardTitle className="electric-accent">Monthly Totals</CardTitle></CardHeader>
+                             <CardContent>
+                                 <div className="chart-container">
+                                     <ResponsiveContainer width="100%" height={300}>
+                                         <BarChart data={chartData.monthlyData}>
+                                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                                             <XAxis dataKey="month" stroke="#ffffff" />
+                                             <YAxis stroke="#ffffff" />
+                                             <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                                             <Legend />
+                                             <Bar dataKey="income" fill={COLORS.income} />
+                                             <Bar dataKey="expense" fill={COLORS.expense} />
+                                         </BarChart>
+                                     </ResponsiveContainer>
+                                 </div>
+                             </CardContent>
+                         </Card>
+                     </TabsContent>
 
                     <TabsContent value="categories">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -666,4 +668,3 @@ const BudgetDashboard = () => {
 };
 
 export default BudgetDashboard;
-
