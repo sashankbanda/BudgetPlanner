@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BACKEND_URL = 'https://budgetplannerbackend.onrender.com';
+const BACKEND_URL = 'http://localhost:8000';
 const API = `${BACKEND_URL}/api`;
 
 const apiClient = axios.create({
@@ -63,15 +63,14 @@ export const authAPI = {
 export const transactionAPI = {
   create: (data) => apiClient.post('/transactions/', data).then(res => res.data),
   
+  // UPDATED getAll function to accept a filters object
   getAll: (filters = {}) => {
+    // Remove any null or undefined filter values before sending
     const cleanFilters = Object.fromEntries(
       Object.entries(filters).filter(([_, v]) => v != null && v !== '')
     );
     return apiClient.get('/transactions/', { params: cleanFilters }).then(res => res.data);
   },
-
-  // ✨ ADD THE UPDATE FUNCTION HERE
-  update: (id, data) => apiClient.put(`/transactions/${id}`, data).then(res => res.data),
 
   delete: (id) => apiClient.delete(`/transactions/${id}`).then(res => res.data)
 };
@@ -80,8 +79,9 @@ export const statsAPI = {
   getMonthlyStats: () => apiClient.get('/stats/monthly').then(res => res.data),
   getCategoryStats: (type) => apiClient.get('/stats/categories', { params: { type } }).then(res => res.data),
   getTrendStats: () => apiClient.get('/stats/trends').then(res => res.data),
-  // ✨ RENAMED function and UPDATED URL here
-  getDashboardStats: () => apiClient.get('/stats/dashboard').then(res => res.data)
+  // getCurrentMonthStats: () => apiClient.get('/stats/current-month').then(res => res.data)
+  getDashboardStats: () => apiClient.get('/stats/dashboard').then(res => res.data),
+  getPeopleStats: () => apiClient.get('/stats/people').then(res => res.data),
 };
 
 export const peopleAPI = {
@@ -94,7 +94,7 @@ const api = {
   auth: authAPI,
   transactions: transactionAPI,
   stats: statsAPI,
-  people: peopleAPI
+  people: peopleAPI // <-- ADD THIS
 };
 
 export default api;
