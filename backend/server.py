@@ -5,6 +5,7 @@ import os
 import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
+# ✨ FIX 1: Updated database imports for lifespan management
 from database import connect_to_database, close_database_connection, get_database
 
 # Import route modules
@@ -27,6 +28,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # Code to run on startup
     logger.info("Budget Planner API starting up...")
+    # ✨ FIX 2: Use the new connection function
     await connect_to_database()
     db = get_database()
     try:
@@ -44,6 +46,7 @@ async def lifespan(app: FastAPI):
 
     # Code to run on shutdown
     logger.info("Shutting down Budget Planner API...")
+    # ✨ FIX 3: Use the new disconnection function
     await close_database_connection()
 
 app = FastAPI(lifespan=lifespan)
@@ -54,7 +57,8 @@ allowed_origins = [
     "http://localhost:3000",
     "http://localhost:3001",
     "https://allocash.netlify.app",
-    "https://allocash.netlify.app/login"
+    # Added login URL back for safety
+    "https://allocash.netlify.app/login" 
 ]
 
 # Add the updated CORS middleware
@@ -65,10 +69,13 @@ app.add_middleware(
     allow_methods=["*"], # Allows all methods (GET, POST, etc.)
     allow_headers=["*"], # Allows all headers
 )
+# --- End of CORS Configuration Update ---
+
 
 api_router = APIRouter(prefix="/api")
-# ✨ UPDATE THIS LINE TO ACCEPT HEAD REQUESTS
-@api_router.get("/health", methods=["GET", "HEAD"])
+
+# ✨ FIX 4: Changed @api_router.get to @api_router.api_route to allow multiple methods
+@api_router.api_route("/health", methods=["GET", "HEAD"])
 async def health_check():
     db = get_database()
     try:
