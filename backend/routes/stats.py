@@ -82,3 +82,38 @@ async def get_dashboard_stats(
     
     # Return the calculated stats, or default zero values if there are no transactions
     return results[0] if results else {"total_income": 0.0, "total_expenses": 0.0, "balance": 0.0, "transaction_count": 0}
+
+# ✨ ADD THIS NEW ENDPOINT
+@router.get("/people", response_model=List[PersonStats])
+async def get_people_stats(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """Calculates financial summaries for each person a user has transacted with."""
+    pipeline = [
+        # Match transactions that have a person associated with them
+        {"$match": {
+            "user_id": user_id,
+            "person": {"$ne": None, "$exists": True}
+        }},
+        # Group by the person's name
+        {"$group": {
+            "_id": "$person",
+            "total_received": {"$sum": {"$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]}},
+            "total_given": {"$sum": {"$cond": [{"$eq": ["$type", "expense"]}, "$amount", 0]}},
+            "transaction_count": {"$sum": 1}
+        }},
+        # Format the output
+        {"$project": {
+            "name": "$_id",
+            "total_received": "$total_received",
+            "total_given": "$total_given",
+            "net_balance": {"$subtract": ["$total_received", "$total_given"]},
+            "transaction_count": "$transaction_count",
+            "_id": 0
+        }},
+        # Sort by name
+        {"$sort": {"name": 1}}
+    ]
+    cursor = db.transactions.aggregate(pipeline)
+    return [PersonStats(**r) for r in await cursor.to_list(length=None)]

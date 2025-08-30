@@ -103,3 +103,11 @@ class CategoryStats(BaseModel):
 class TrendStats(BaseModel):
     month: str
     total: float
+
+# ✨ ADD THIS NEW MODEL AT THE END
+class PersonStats(BaseModel):
+    name: str
+    total_given: float = 0.0
+    total_received: float = 0.0
+    net_balance: float = 0.0
+    transaction_count: int = 0
