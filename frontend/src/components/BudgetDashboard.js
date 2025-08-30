@@ -230,7 +230,6 @@ const BudgetDashboard = () => {
         return Array.from(allCategories).sort();
     }, [transactions]);
 
-    // ✨ NEW: Calculate totals for the filtered transactions using useMemo for efficiency.
     const filteredTotals = useMemo(() => {
         return transactions.reduce((acc, curr) => {
             if (curr.type === 'income') {
@@ -241,9 +240,8 @@ const BudgetDashboard = () => {
             acc.net = acc.income - acc.expense;
             return acc;
         }, { income: 0, expense: 0, net: 0 });
-    }, [transactions]); // This calculation only re-runs when the 'transactions' state changes.
+    }, [transactions]); 
 
-    // ✨ NEW: Helper to determine if any filters are currently active.
     const isFilterActive = useMemo(() => {
         return filters.search !== '' || filters.type !== '' || filters.category !== '';
     }, [filters]);
@@ -331,79 +329,79 @@ const BudgetDashboard = () => {
                                 </DialogHeader>
                                 <div className="space-y-4">
                                      <div>
-                                         <Label>Account</Label>
-                                         <Select value={formData.account_id} onValueChange={(value) => setFormData(prev => ({ ...prev, account_id: value }))}>
-                                             <SelectTrigger className="glass-input"><SelectValue placeholder="Select an account..." /></SelectTrigger>
-                                             <SelectContent className="glass-effect border-0 text-white">
-                                                 {accounts.map(acc => (
-                                                     <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
-                                                 ))}
-                                             </SelectContent>
-                                         </Select>
-                                     </div>
-                                     <div>
-                                         <Label>Type</Label>
-                                         <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value, category: '' }))}>
-                                             <SelectTrigger className="glass-input"><SelectValue /></SelectTrigger>
-                                             <SelectContent className="glass-effect border-0 text-white">
-                                                 <SelectItem value="income" className="income-accent">Income</SelectItem>
-                                                 <SelectItem value="expense" className="expense-accent">Expense</SelectItem>
-                                             </SelectContent>
-                                         </Select>
-                                     </div>
-                                     <div>
-                                         <Label>Category</Label>
-                                         <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
-                                             <SelectTrigger className="glass-input"><SelectValue placeholder="Select category" /></SelectTrigger>
-                                             <SelectContent className="glass-effect border-0 text-white">
-                                                 {(formData.type === 'income' ? incomeCategories : expenseCategories).map(cat => (
-                                                     <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                                                 ))}
-                                             </SelectContent>
-                                         </Select>
-                                     </div>
-                                     {formData.category === 'Custom' && (
-                                         <div>
-                                             <Label>Custom Category</Label>
-                                             <Input className="glass-input" value={formData.customCategory} onChange={(e) => setFormData(prev => ({ ...prev, customCategory: e.target.value }))} placeholder="Enter custom category" />
-                                         </div>
-                                     )}
-                                     {showPersonField && (
-                                         <>
-                                             <div>
-                                                 <Label>Person</Label>
-                                                 <Select value={formData.person} onValueChange={(value) => setFormData(prev => ({ ...prev, person: value }))}>
-                                                     <SelectTrigger className="glass-input"><SelectValue placeholder="Select person..." /></SelectTrigger>
-                                                     <SelectContent className="glass-effect border-0 text-white">
-                                                         {people.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                                                         <SelectItem value="add_new" className="electric-accent">+ Add New Person</SelectItem>
-                                                     </SelectContent>
-                                                 </Select>
-                                             </div>
-                                             {formData.person === 'add_new' && (
-                                                 <div>
-                                                     <Label>New Person Name</Label>
-                                                     <Input className="glass-input" value={formData.newPerson} onChange={(e) => setFormData(prev => ({ ...prev, newPerson: e.target.value }))} placeholder="e.g., Alex, Mom..." />
-                                                 </div>
-                                             )}
-                                         </>
-                                     )}
-                                     <div>
-                                         <Label>Amount</Label>
-                                         <Input className="glass-input" type="number" step="0.01" min="0" value={formData.amount} onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))} placeholder="0.00" />
-                                     </div>
-                                     <div>
-                                         <Label>Description</Label>
-                                         <Input className="glass-input" value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} placeholder="Transaction description" />
-                                     </div>
-                                     <div>
-                                         <Label>Date</Label>
-                                         <Input className="glass-input" type="date" value={formData.date} onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))} />
-                                     </div>
-                                     <Button onClick={handleFormSubmit} className="w-full glass-button neon-glow">
-                                         {editingTransaction ? 'Save Changes' : 'Add Transaction'}
-                                     </Button>
-                                 </div>
+                                        <Label>Account</Label>
+                                        <Select value={formData.account_id} onValueChange={(value) => setFormData(prev => ({ ...prev, account_id: value }))}>
+                                            <SelectTrigger className="glass-input"><SelectValue placeholder="Select an account..." /></SelectTrigger>
+                                            <SelectContent className="glass-effect border-0 text-white">
+                                                {accounts.map(acc => (
+                                                    <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div>
+                                        <Label>Type</Label>
+                                        <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value, category: '' }))}>
+                                            <SelectTrigger className="glass-input"><SelectValue /></SelectTrigger>
+                                            <SelectContent className="glass-effect border-0 text-white">
+                                                <SelectItem value="income" className="income-accent">Income</SelectItem>
+                                                <SelectItem value="expense" className="expense-accent">Expense</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div>
+                                        <Label>Category</Label>
+                                        <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
+                                            <SelectTrigger className="glass-input"><SelectValue placeholder="Select category" /></SelectTrigger>
+                                            <SelectContent className="glass-effect border-0 text-white">
+                                                {(formData.type === 'income' ? incomeCategories : expenseCategories).map(cat => (
+                                                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    {formData.category === 'Custom' && (
+                                        <div>
+                                            <Label>Custom Category</Label>
+                                            <Input className="glass-input" value={formData.customCategory} onChange={(e) => setFormData(prev => ({ ...prev, customCategory: e.target.value }))} placeholder="Enter custom category" />
+                                        </div>
+                                    )}
+                                    {showPersonField && (
+                                        <>
+                                            <div>
+                                                <Label>Person</Label>
+                                                <Select value={formData.person} onValueChange={(value) => setFormData(prev => ({ ...prev, person: value }))}>
+                                                    <SelectTrigger className="glass-input"><SelectValue placeholder="Select person..." /></SelectTrigger>
+                                                    <SelectContent className="glass-effect border-0 text-white">
+                                                        {people.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                                                        <SelectItem value="add_new" className="electric-accent">+ Add New Person</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            {formData.person === 'add_new' && (
+                                                <div>
+                                                    <Label>New Person Name</Label>
+                                                    <Input className="glass-input" value={formData.newPerson} onChange={(e) => setFormData(prev => ({ ...prev, newPerson: e.target.value }))} placeholder="e.g., Alex, Mom..." />
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                    <div>
+                                        <Label>Amount</Label>
+                                        <Input className="glass-input" type="number" step="0.01" min="0" value={formData.amount} onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))} placeholder="0.00" />
+                                    </div>
+                                    <div>
+                                        <Label>Description</Label>
+                                        <Input className="glass-input" value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} placeholder="Transaction description" />
+                                    </div>
+                                    <div>
+                                        <Label>Date</Label>
+                                        <Input className="glass-input" type="date" value={formData.date} onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))} />
+                                    </div>
+                                    <Button onClick={handleFormSubmit} className="w-full glass-button neon-glow">
+                                        {editingTransaction ? 'Save Changes' : 'Add Transaction'}
+                                    </Button>
+                                </div>
                             </DialogContent>
                         </Dialog>
                         <Button variant="ghost" size="icon" onClick={handleLogout} className="glass-button expense-glow"><LogOut className="w-5 h-5" /></Button>
@@ -468,24 +466,24 @@ const BudgetDashboard = () => {
                     
                     <TabsContent value="overview">
                          <Card className="glass-card">
-                             <CardHeader><CardTitle className="electric-accent">Monthly Totals</CardTitle></CardHeader>
-                             <CardContent>
-                                 <div className="chart-container">
-                                     <ResponsiveContainer width="100%" height={300}>
-                                         <BarChart data={chartData.monthlyData}>
-                                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                                             <XAxis dataKey="month" stroke="#ffffff" />
-                                             <YAxis stroke="#ffffff" />
-                                             <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
-                                             <Legend />
-                                             <Bar dataKey="income" fill={COLORS.income} />
-                                             <Bar dataKey="expense" fill={COLORS.expense} />
-                                         </BarChart>
-                                     </ResponsiveContainer>
-                                 </div>
-                             </CardContent>
+                            <CardHeader><CardTitle className="electric-accent">Monthly Totals</CardTitle></CardHeader>
+                            <CardContent>
+                                <div className="chart-container">
+                                    <ResponsiveContainer width="100%" height={300}>
+                                        <BarChart data={chartData.monthlyData}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                                            <XAxis dataKey="month" stroke="#ffffff" />
+                                            <YAxis stroke="#ffffff" />
+                                            <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                                            <Legend />
+                                            <Bar dataKey="income" fill={COLORS.income} />
+                                            <Bar dataKey="expense" fill={COLORS.expense} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </CardContent>
                          </Card>
-                     </TabsContent>
+                    </TabsContent>
 
                     <TabsContent value="categories">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -598,19 +596,22 @@ const BudgetDashboard = () => {
                                         <Input placeholder="Search description, category, person..." className="glass-input pl-10" value={filters.search} onChange={(e) => handleFilterChange('search', e.target.value)} />
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:flex-grow-0">
-                                        <Select value={filters.type} onValueChange={(v) => handleFilterChange('type', v || '')}>
+                                        {/* FIX START: Changed onValueChange handler and SelectItem value */}
+                                        <Select value={filters.type} onValueChange={(v) => handleFilterChange('type', v === 'all' ? '' : v)}>
                                             <SelectTrigger className="glass-input"><SelectValue placeholder="All Types" /></SelectTrigger>
                                             <SelectContent className="glass-effect border-0 text-white">
-                                                <SelectItem value="">All Types</SelectItem>
+                                                <SelectItem value="all">All Types</SelectItem>
+                                                {/* FIX END */}
                                                 <SelectItem value="income">Income</SelectItem>
                                                 <SelectItem value="expense">Expense</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <Select value={filters.category} onValueChange={(v) => handleFilterChange('category', v || '')}>
+                                        {/* FIX START: Changed onValueChange handler and SelectItem value */}
+                                        <Select value={filters.category} onValueChange={(v) => handleFilterChange('category', v === 'all' ? '' : v)}>
                                             <SelectTrigger className="glass-input"><SelectValue placeholder="All Categories" /></SelectTrigger>
                                             <SelectContent className="glass-effect border-0 text-white">
-                                                {/* ✨ NEW: "All Categories" option added */}
-                                                <SelectItem value="">All Categories</SelectItem>
+                                                <SelectItem value="all">All Categories</SelectItem>
+                                                {/* FIX END */}
                                                 {uniqueCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                                             </SelectContent>
                                         </Select>
@@ -626,7 +627,6 @@ const BudgetDashboard = () => {
                                     </div>
                                 </div>
 
-                                {/* ✨ NEW: Dynamic Filter Summary Bar */}
                                 {isFilterActive && (
                                     <div className="glass-effect p-3 rounded-lg text-sm">
                                         <p className="text-gray-400 mb-2 text-center">
