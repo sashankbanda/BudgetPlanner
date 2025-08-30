@@ -51,16 +51,34 @@ async def get_trend_stats(
     cursor = db.transactions.aggregate(pipeline)
     return [TrendStats(**r) for r in await cursor.to_list(length=None)]
 
-@router.get("/current-month")
-async def get_current_month_stats(
+@router.get("/dashboard")
+async def get_dashboard_stats(
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
-    current_month = datetime.now().strftime("%Y-%m")
+    """Calculates overall statistics for the main dashboard cards."""
     pipeline = [
-        {"$match": {"month": current_month, "user_id": user_id}},
-        {"$group": {"_id": None, "total_income": {"$sum": {"$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]}}, "total_expenses": {"$sum": {"$cond": [{"$eq": ["$type", "expense"]}, "$amount", 0]}}, "transaction_count": {"$sum": 1}}},
-        {"$project": {"total_income": "$total_income", "total_expenses": "$total_expenses", "balance": {"$subtract": ["$total_income", "$total_expenses"]}, "transaction_count": "$transaction_count", "_id": 0}}
+        # Step 1: Match all transactions for the current user
+        {"$match": {"user_id": user_id}},
+        
+        # Step 2: Group them to calculate totals
+        {"$group": {
+            "_id": None, 
+            "total_income": {"$sum": {"$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]}}, 
+            "total_expenses": {"$sum": {"$cond": [{"$eq": ["$type", "expense"]}, "$amount", 0]}}, 
+            "transaction_count": {"$sum": 1}
+        }},
+        
+        # Step 3: Format the final output
+        {"$project": {
+            "total_income": "$total_income", 
+            "total_expenses": "$total_expenses", 
+            "balance": {"$subtract": ["$total_income", "$total_expenses"]}, 
+            "transaction_count": "$transaction_count", 
+            "_id": 0
+        }}
     ]
     results = await db.transactions.aggregate(pipeline).to_list(length=1)
+    
+    # Return the calculated stats, or default zero values if there are no transactions
     return results[0] if results else {"total_income": 0.0, "total_expenses": 0.0, "balance": 0.0, "transaction_count": 0}
