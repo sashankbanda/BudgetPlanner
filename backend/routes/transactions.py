@@ -64,16 +64,19 @@ async def get_transactions(
     account_id: Optional[str] = Query(default=None),
     limit: int = Query(default=100, ge=1, le=1000),
     search: Optional[str] = None,
-    # ✨ FIX: Allow the 'type' parameter to accept an empty string
     type: Optional[Literal["income", "expense", ""]] = Query(default=None),
     category: Optional[str] = None,
     sort: Optional[Literal["date_desc", "amount_desc", "category_asc"]] = Query(default="date_desc")
 ):
     try:
         query_filter = {"user_id": user_id}
+
+        # ✨ FIX: Ensure we only fetch transactions that have an account_id.
+        # This prevents validation errors for old data that might be missing this field.
+        query_filter["account_id"] = {"$exists": True}
+
         if account_id:
             query_filter["account_id"] = account_id
-        # An empty string for 'type' will evaluate to False, so it is safely ignored.
         if type:
             query_filter["type"] = type
         if category:
@@ -125,4 +128,3 @@ async def get_transaction(
         return Transaction(**transaction)
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to fetch transaction")
-
