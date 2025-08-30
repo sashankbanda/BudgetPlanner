@@ -1,7 +1,7 @@
 import axios from 'axios';
-// const BACKEND_URL = 'http://localhost:8000';
-// ✨ FIX 1: Use an environment variable for the backend URL.
-// This makes the URL flexible for both local development and production.
+
+// Use an environment variable for the backend URL.
+// This allows it to work both locally and in production.
 const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const apiClient = axios.create({
@@ -70,7 +70,6 @@ export const transactionAPI = {
     return apiClient.get('/transactions/', { params: cleanFilters }).then(res => res.data);
   },
 
-  // ✨ FIX 3: Added the missing 'update' function
   update: (id, data) => apiClient.put(`/transactions/${id}`, data).then(res => res.data),
 
   delete: (id) => apiClient.delete(`/transactions/${id}`).then(res => res.data)
@@ -80,9 +79,7 @@ export const statsAPI = {
   getMonthlyStats: () => apiClient.get('/stats/monthly').then(res => res.data),
   getCategoryStats: (type) => apiClient.get('/stats/categories', { params: { type } }).then(res => res.data),
   getTrendStats: () => apiClient.get('/stats/trends').then(res => res.data),
-  // ✨ FIX 2: Replaced getCurrentMonthStats with getDashboardStats
   getDashboardStats: () => apiClient.get('/stats/dashboard').then(res => res.data),
-  // ✨ FIX 4: Added the missing 'getPeopleStats' function
   getPeopleStats: () => apiClient.get('/stats/people').then(res => res.data),
 };
 
