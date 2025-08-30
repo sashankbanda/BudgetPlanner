@@ -1,8 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
-from database import db
+from database import get_database
 from auth import get_password_hash, verify_password, create_access_token
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -15,8 +16,7 @@ class Token(BaseModel):
     token_type: str
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
-async def create_user(user: UserCreate):
-    """Endpoint to register a new user."""
+async def create_user(user: UserCreate, db: AsyncIOMotorDatabase = Depends(get_database)):
     existing_user = await db.users.find_one({"_id": user.email})
     if existing_user:
         raise HTTPException(
@@ -27,7 +27,7 @@ async def create_user(user: UserCreate):
     hashed_password = get_password_hash(user.password)
     
     user_document = {
-        "_id": user.email, # Using email as the unique ID
+        "_id": user.email,
         "email": user.email,
         "hashed_password": hashed_password
     }
@@ -36,9 +36,11 @@ async def create_user(user: UserCreate):
     return {"message": "User created successfully", "email": user.email}
 
 @router.post("/token", response_model=Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    """Endpoint to login and get an access token."""
-    user = await db.users.find_one({"_id": form_data.username}) # username is the email
+async def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    user = await db.users.find_one({"_id": form_data.username})
     if not user or not verify_password(form_data.password, user["hashed_password"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

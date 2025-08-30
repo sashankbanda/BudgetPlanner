@@ -5,13 +5,13 @@ import os
 import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
-from database import db, client
+from database import connect_to_database, close_database_connection, get_database
 
 # Import route modules
 from routes.transactions import router as transactions_router
 from routes.stats import router as stats_router
 from routes.users import router as users_router
-from routes.people import router as people_router # <-- IMPORT NEW ROUTER
+from routes.people import router as people_router
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -27,6 +27,8 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # Code to run on startup
     logger.info("Budget Planner API starting up...")
+    await connect_to_database()
+    db = get_database()
     try:
         # Updated indexes to include user_id for multi-tenancy
         await db.transactions.create_index([("user_id", 1), ("month", 1), ("type", 1)])
@@ -42,7 +44,7 @@ async def lifespan(app: FastAPI):
 
     # Code to run on shutdown
     logger.info("Shutting down Budget Planner API...")
-    client.close()
+    await close_database_connection()
 
 app = FastAPI(lifespan=lifespan)
 
@@ -51,8 +53,8 @@ app = FastAPI(lifespan=lifespan)
 allowed_origins = [
     "http://localhost:3000",
     "http://localhost:3001",
-    # The preview URL was removed in the new version.
-    # Add your future Netlify URL here, e.g., "https://your-app-name.netlify.app"
+    "https://allocash.netlify.app",
+    "https://allocash.netlify.app/login"
 ]
 
 # Add the updated CORS middleware
@@ -63,13 +65,12 @@ app.add_middleware(
     allow_methods=["*"], # Allows all methods (GET, POST, etc.)
     allow_headers=["*"], # Allows all headers
 )
-# --- End of CORS Configuration Update ---
-
 
 api_router = APIRouter(prefix="/api")
 
 @api_router.get("/health")
 async def health_check():
+    db = get_database()
     try:
         await db.command('ping')
         return {"status": "healthy", "database": "connected"}
@@ -78,7 +79,7 @@ async def health_check():
 
 # Include all routers
 api_router.include_router(users_router)
-api_router.include_router(people_router) # <-- ADD THE NEW ROUTER
+api_router.include_router(people_router)
 api_router.include_router(transactions_router)
 api_router.include_router(stats_router)
 

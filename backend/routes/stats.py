@@ -1,14 +1,18 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Literal
 from models.transaction import MonthlyStats, CategoryStats, TrendStats
-from database import db
+from database import get_database
 from datetime import datetime
 from auth import get_current_user_id
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 router = APIRouter(prefix="/stats", tags=["statistics"])
 
 @router.get("/monthly", response_model=List[MonthlyStats])
-async def get_monthly_stats(user_id: str = Depends(get_current_user_id)):
+async def get_monthly_stats(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
     pipeline = [
         {"$match": {"user_id": user_id}},
         {"$group": {"_id": "$month", "income": {"$sum": {"$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]}}, "expense": {"$sum": {"$cond": [{"$eq": ["$type", "expense"]}, "$amount", 0]}}}},
@@ -19,7 +23,11 @@ async def get_monthly_stats(user_id: str = Depends(get_current_user_id)):
     return [MonthlyStats(**r) for r in await cursor.to_list(length=None)]
 
 @router.get("/categories", response_model=List[CategoryStats])
-async def get_category_stats(type: Literal["income", "expense"], user_id: str = Depends(get_current_user_id)):
+async def get_category_stats(
+    type: Literal["income", "expense"],
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
     pipeline = [
         {"$match": {"type": type, "user_id": user_id}},
         {"$group": {"_id": "$category", "value": {"$sum": "$amount"}, "count": {"$sum": 1}}},
@@ -30,7 +38,10 @@ async def get_category_stats(type: Literal["income", "expense"], user_id: str = 
     return [CategoryStats(**r) for r in await cursor.to_list(length=None)]
 
 @router.get("/trends", response_model=List[TrendStats])
-async def get_trend_stats(user_id: str = Depends(get_current_user_id)):
+async def get_trend_stats(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
     pipeline = [
         {"$match": {"user_id": user_id}},
         {"$group": {"_id": "$month", "income": {"$sum": {"$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]}}, "expense": {"$sum": {"$cond": [{"$eq": ["$type", "expense"]}, "$amount", 0]}}}},
@@ -41,7 +52,10 @@ async def get_trend_stats(user_id: str = Depends(get_current_user_id)):
     return [TrendStats(**r) for r in await cursor.to_list(length=None)]
 
 @router.get("/current-month")
-async def get_current_month_stats(user_id: str = Depends(get_current_user_id)):
+async def get_current_month_stats(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
     current_month = datetime.now().strftime("%Y-%m")
     pipeline = [
         {"$match": {"month": current_month, "user_id": user_id}},
