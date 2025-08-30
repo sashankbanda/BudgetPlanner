@@ -16,15 +16,15 @@ async def create_transaction(
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
-    try:
-        transaction = Transaction.from_create(transaction_data, user_id)
-        transaction_dict = transaction.dict()
-        await db.transactions.insert_one(transaction_dict)
-        return transaction
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal server error")
+    # ✨ ADDED: Verify that the account exists and belongs to the user
+    account = await db.accounts.find_one({"id": transaction_data.account_id, "user_id": user_id})
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found for this user")
 
-# ✨ ADD THIS NEW ENDPOINT FOR UPDATING
+    transaction = Transaction.from_create(transaction_data, user_id)
+    await db.transactions.insert_one(transaction.dict())
+    return transaction
+
 @router.put("/{transaction_id}", response_model=Transaction)
 async def update_transaction(
     transaction_id: str,
@@ -33,11 +33,15 @@ async def update_transaction(
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     update_dict = update_data.dict(exclude_unset=True)
-
     if not update_dict:
         raise HTTPException(status_code=400, detail="No update data provided")
 
-    # If the date is being updated, we must also update the month
+    # ✨ ADDED: If account is being changed, verify the new account exists
+    if "account_id" in update_dict:
+        account = await db.accounts.find_one({"id": update_dict["account_id"], "user_id": user_id})
+        if not account:
+            raise HTTPException(status_code=404, detail="New account not found for this user")
+
     if "date" in update_dict:
         update_dict["month"] = update_dict["date"][:7]
 
@@ -51,14 +55,13 @@ async def update_transaction(
 
     if updated_transaction:
         return Transaction(**updated_transaction)
-    
     raise HTTPException(status_code=404, detail="Transaction not found")
-
 
 @router.get("/", response_model=List[Transaction])
 async def get_transactions(
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database),
+    account_id: Optional[str] = Query(None), # ✨ ADDED: Filter by account
     limit: int = Query(default=100, ge=1, le=1000),
     search: Optional[str] = None,
     type: Optional[Literal["income", "expense"]] = None,
@@ -67,6 +70,9 @@ async def get_transactions(
 ):
     try:
         query_filter = {"user_id": user_id}
+        # ✨ ADDED: Add account_id to the query if provided
+        if account_id:
+            query_filter["account_id"] = account_id
         if type:
             query_filter["type"] = type
         if category:
@@ -97,6 +103,7 @@ async def delete_transaction(
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
+    # No changes needed here, as it's already secure by user_id
     try:
         result = await db.transactions.delete_one({"id": transaction_id, "user_id": user_id})
         if result.deleted_count == 0:
@@ -111,6 +118,7 @@ async def get_transaction(
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
+    # No changes needed here
     try:
         transaction = await db.transactions.find_one({"id": transaction_id, "user_id": user_id})
         if not transaction:
@@ -118,3 +126,4 @@ async def get_transaction(
         return Transaction(**transaction)
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to fetch transaction")
+

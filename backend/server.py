@@ -5,7 +5,6 @@ import os
 import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
-# ✨ FIX 1: Updated database imports for lifespan management
 from database import connect_to_database, close_database_connection, get_database
 
 # Import route modules
@@ -13,6 +12,7 @@ from routes.transactions import router as transactions_router
 from routes.stats import router as stats_router
 from routes.users import router as users_router
 from routes.people import router as people_router
+from routes.accounts import router as accounts_router # ✨ ADDED
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -28,16 +28,19 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # Code to run on startup
     logger.info("Budget Planner API starting up...")
-    # ✨ FIX 2: Use the new connection function
     await connect_to_database()
     db = get_database()
     try:
-        # Updated indexes to include user_id for multi-tenancy
-        await db.transactions.create_index([("user_id", 1), ("month", 1), ("type", 1)])
+        # Indexes for transactions
+        await db.transactions.create_index([("user_id", 1), ("account_id", 1)])
         await db.transactions.create_index([("user_id", 1), ("date", -1)])
-        await db.transactions.create_index([("user_id", 1), ("category", 1), ("type", 1)])
-        # Index for the new users collection
+        
+        # Index for users
         await db.users.create_index([("email", 1)], unique=True)
+
+        # ✨ ADDED: Index for accounts
+        await db.accounts.create_index([("user_id", 1)])
+
         logger.info("Database indexes created successfully")
     except Exception as e:
         logger.warning(f"Could not create indexes: {e}")
@@ -46,35 +49,29 @@ async def lifespan(app: FastAPI):
 
     # Code to run on shutdown
     logger.info("Shutting down Budget Planner API...")
-    # ✨ FIX 3: Use the new disconnection function
     await close_database_connection()
 
 app = FastAPI(lifespan=lifespan)
 
 # --- CORS Configuration Update ---
-# Define the list of allowed origins
 allowed_origins = [
     "http://localhost:3000",
     "http://localhost:3001",
     "https://allocash.netlify.app",
-    # Added login URL back for safety
-    "https://allocash.netlify.app/login" 
+    "https://allocash.netlify.app/login"
 ]
 
-# Add the updated CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins, # Use the specific list
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"], # Allows all methods (GET, POST, etc.)
-    allow_headers=["*"], # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 # --- End of CORS Configuration Update ---
 
-
 api_router = APIRouter(prefix="/api")
 
-# ✨ FIX 4: Changed @api_router.get to @api_router.api_route to allow multiple methods
 @api_router.api_route("/health", methods=["GET", "HEAD"])
 async def health_check():
     db = get_database()
@@ -85,9 +82,11 @@ async def health_check():
         return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
 
 # Include all routers
+api_router.include_router(accounts_router) # ✨ ADDED
 api_router.include_router(users_router)
 api_router.include_router(people_router)
 api_router.include_router(transactions_router)
 api_router.include_router(stats_router)
 
 app.include_router(api_router)
+

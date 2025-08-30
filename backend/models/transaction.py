@@ -3,14 +3,17 @@ from typing import Optional, Literal
 from datetime import datetime
 import uuid
 
-class TransactionCreate(BaseModel):
+# A new base class to hold all common transaction fields
+class TransactionBase(BaseModel):
     type: Literal["income", "expense"]
     category: str
     amount: float
     description: str = ""
-    date: str  # Format: YYYY-MM-DD
+    date: str
     person: Optional[str] = None
+    account_id: str # ✨ ADDED: Every transaction must belong to an account.
 
+class TransactionCreate(TransactionBase):
     @validator('amount')
     def amount_must_be_positive(cls, v):
         if v <= 0:
@@ -31,7 +34,6 @@ class TransactionCreate(BaseModel):
             raise ValueError('Date must be in YYYY-MM-DD format')
         return v
 
-# ✨ ADD THIS NEW MODEL FOR UPDATING TRANSACTIONS
 class TransactionUpdate(BaseModel):
     type: Optional[Literal["income", "expense"]] = None
     category: Optional[str] = None
@@ -39,7 +41,9 @@ class TransactionUpdate(BaseModel):
     description: Optional[str] = None
     date: Optional[str] = None
     person: Optional[str] = None
+    account_id: Optional[str] = None # ✨ ADDED: Allow changing the account
 
+    # Validators remain the same
     @validator('amount')
     def amount_must_be_positive(cls, v):
         if v is not None and v <= 0:
@@ -61,34 +65,24 @@ class TransactionUpdate(BaseModel):
                 raise ValueError('Date must be in YYYY-MM-DD format')
         return v
 
-class Transaction(BaseModel):
+class Transaction(TransactionBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str
-    type: Literal["income", "expense"]
-    category: str
-    amount: float
-    description: str = ""
-    date: str  # Format: YYYY-MM-DD
-    month: str  # Format: YYYY-MM
-    person: Optional[str] = None
+    month: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     @classmethod
     def from_create(cls, transaction_create: TransactionCreate, user_id: str):
         month = transaction_create.date[:7]
+        # ✨ SIMPLIFIED: Pass all fields from the create model directly
         return cls(
             user_id=user_id,
-            type=transaction_create.type,
-            category=transaction_create.category,
-            amount=transaction_create.amount,
-            description=transaction_create.description,
-            date=transaction_create.date,
             month=month,
-            person=transaction_create.person
+            **transaction_create.dict()
         )
 
-# --- Stats models remain the same ---
+# --- Stats Models ---
 class MonthlyStats(BaseModel):
     month: str
     income: float = 0.0
@@ -104,10 +98,10 @@ class TrendStats(BaseModel):
     month: str
     total: float
 
-# ✨ ADD THIS NEW MODEL AT THE END
 class PersonStats(BaseModel):
     name: str
     total_given: float = 0.0
     total_received: float = 0.0
     net_balance: float = 0.0
     transaction_count: int = 0
+
