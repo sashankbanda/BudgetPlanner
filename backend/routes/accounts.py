@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List
 from models.account import Account, AccountCreate, AccountUpdate
-from database import get_database
+from database import get_database, db_manager # ✨ ADDED: Import db_manager
 from auth import get_current_user_id
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo import ReturnDocument
@@ -52,9 +52,28 @@ async def delete_account(
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
-    # Optional: You might want to decide what happens to transactions linked to this account.
-    # For now, we'll just delete the account.
-    result = await db.accounts.delete_one({"id": account_id, "user_id": user_id})
-    if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Account not found")
-    return {"message": "Account deleted successfully"}
+    # ✨ FIX: Use a transaction to delete the account and all its associated transactions
+    # This prevents orphaned data and ensures data integrity.
+    try:
+        async with await db_manager.client.start_session() as session:
+            async with session.in_transaction():
+                # Step 1: Delete the account
+                account_result = await db.accounts.delete_one(
+                    {"id": account_id, "user_id": user_id},
+                    session=session
+                )
+
+                if account_result.deleted_count == 0:
+                    # This will automatically abort the transaction
+                    raise HTTPException(status_code=404, detail="Account not found")
+
+                # Step 2: Delete all transactions associated with that account
+                await db.transactions.delete_many(
+                    {"account_id": account_id, "user_id": user_id},
+                    session=session
+                )
+        return {"message": "Account and all associated transactions deleted successfully"}
+    except Exception as e:
+        # Log the exception e for debugging if you have a logger setup
+        raise HTTPException(status_code=500, detail="An error occurred while deleting the account.")
+

@@ -61,19 +61,19 @@ async def update_transaction(
 async def get_transactions(
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    # ✨ THIS IS THE FIX: The parameter must be defined with Query(default=None)
     account_id: Optional[str] = Query(default=None),
     limit: int = Query(default=100, ge=1, le=1000),
     search: Optional[str] = None,
-    type: Optional[Literal["income", "expense"]] = None,
+    # ✨ FIX: Allow the 'type' parameter to accept an empty string
+    type: Optional[Literal["income", "expense", ""]] = Query(default=None),
     category: Optional[str] = None,
     sort: Optional[Literal["date_desc", "amount_desc", "category_asc"]] = Query(default="date_desc")
 ):
     try:
         query_filter = {"user_id": user_id}
-        # Add account_id to the query if provided
         if account_id:
             query_filter["account_id"] = account_id
+        # An empty string for 'type' will evaluate to False, so it is safely ignored.
         if type:
             query_filter["type"] = type
         if category:
@@ -104,7 +104,6 @@ async def delete_transaction(
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
-    # No changes needed here, as it's already secure by user_id
     try:
         result = await db.transactions.delete_one({"id": transaction_id, "user_id": user_id})
         if result.deleted_count == 0:
@@ -119,7 +118,6 @@ async def get_transaction(
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
-    # No changes needed here
     try:
         transaction = await db.transactions.find_one({"id": transaction_id, "user_id": user_id})
         if not transaction:
