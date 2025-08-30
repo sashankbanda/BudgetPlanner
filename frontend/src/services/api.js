@@ -1,10 +1,11 @@
 import axios from 'axios';
-
-const BACKEND_URL = 'http://localhost:8000';
-const API = `${BACKEND_URL}/api`;
+// const BACKEND_URL = 'http://localhost:8000';
+// ✨ FIX 1: Use an environment variable for the backend URL.
+// This makes the URL flexible for both local development and production.
+const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const apiClient = axios.create({
-  baseURL: API,
+  baseURL: API_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
@@ -29,7 +30,6 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
         localStorage.removeItem('accessToken');
-        // Redirect to login only if not already on the login page
         if (window.location.pathname !== '/login') {
             window.location.href = '/login';
         }
@@ -63,14 +63,15 @@ export const authAPI = {
 export const transactionAPI = {
   create: (data) => apiClient.post('/transactions/', data).then(res => res.data),
   
-  // UPDATED getAll function to accept a filters object
   getAll: (filters = {}) => {
-    // Remove any null or undefined filter values before sending
     const cleanFilters = Object.fromEntries(
       Object.entries(filters).filter(([_, v]) => v != null && v !== '')
     );
     return apiClient.get('/transactions/', { params: cleanFilters }).then(res => res.data);
   },
+
+  // ✨ FIX 3: Added the missing 'update' function
+  update: (id, data) => apiClient.put(`/transactions/${id}`, data).then(res => res.data),
 
   delete: (id) => apiClient.delete(`/transactions/${id}`).then(res => res.data)
 };
@@ -79,8 +80,9 @@ export const statsAPI = {
   getMonthlyStats: () => apiClient.get('/stats/monthly').then(res => res.data),
   getCategoryStats: (type) => apiClient.get('/stats/categories', { params: { type } }).then(res => res.data),
   getTrendStats: () => apiClient.get('/stats/trends').then(res => res.data),
-  // getCurrentMonthStats: () => apiClient.get('/stats/current-month').then(res => res.data)
+  // ✨ FIX 2: Replaced getCurrentMonthStats with getDashboardStats
   getDashboardStats: () => apiClient.get('/stats/dashboard').then(res => res.data),
+  // ✨ FIX 4: Added the missing 'getPeopleStats' function
   getPeopleStats: () => apiClient.get('/stats/people').then(res => res.data),
 };
 
@@ -88,13 +90,11 @@ export const peopleAPI = {
   getAll: () => apiClient.get('/people').then(res => res.data)
 };
 
-
-
 const api = {
   auth: authAPI,
   transactions: transactionAPI,
   stats: statsAPI,
-  people: peopleAPI // <-- ADD THIS
+  people: peopleAPI
 };
 
 export default api;
