@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from typing import List
 from models.account import Account, AccountCreate, AccountUpdate
-from database import get_database, db_manager # ✨ ADDED: Import db_manager
+from database import get_database
 from auth import get_current_user_id
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pymongo import ReturnDocument
@@ -52,28 +52,22 @@ async def delete_account(
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
-    # ✨ FIX: Use a transaction to delete the account and all its associated transactions
-    # This prevents orphaned data and ensures data integrity.
+    # ✨ FIX: Simplified deletion logic to be more robust.
+    # We first ensure the account exists, then delete its transactions, then the account itself.
+    # This avoids the strict requirements and complexity of database transactions.
     try:
-        async with await db_manager.client.start_session() as session:
-            async with session.in_transaction():
-                # Step 1: Delete the account
-                account_result = await db.accounts.delete_one(
-                    {"id": account_id, "user_id": user_id},
-                    session=session
-                )
+        # Step 1: Check if the account exists for this user
+        account_to_delete = await db.accounts.find_one({"id": account_id, "user_id": user_id})
+        if not account_to_delete:
+            raise HTTPException(status_code=404, detail="Account not found")
 
-                if account_result.deleted_count == 0:
-                    # This will automatically abort the transaction
-                    raise HTTPException(status_code=404, detail="Account not found")
+        # Step 2: Delete all transactions associated with that account
+        await db.transactions.delete_many({"account_id": account_id, "user_id": user_id})
 
-                # Step 2: Delete all transactions associated with that account
-                await db.transactions.delete_many(
-                    {"account_id": account_id, "user_id": user_id},
-                    session=session
-                )
+        # Step 3: Delete the account itself
+        await db.accounts.delete_one({"id": account_id, "user_id": user_id})
+        
         return {"message": "Account and all associated transactions deleted successfully"}
     except Exception as e:
         # Log the exception e for debugging if you have a logger setup
-        raise HTTPException(status_code=500, detail="An error occurred while deleting the account.")
-
+        raise HTTPException(status_code=500, detail=f"An error occurred while deleting the account: {e}")
