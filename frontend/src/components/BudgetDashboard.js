@@ -20,7 +20,6 @@ import api from '../services/api';
 import { incomeCategories, expenseCategories } from '../mock';
 
 const COLORS = { income: '#00ff88', expense: '#ff4757', electric: '#00bfff' };
-// ✨ FIX: Expanded this list to be more comprehensive for your logic.
 const personCategories = ["To Friends", "From Friends", "To Parents", "From Parents"];
 
 const BudgetDashboard = () => {
@@ -57,15 +56,11 @@ const BudgetDashboard = () => {
         person: '', newPerson: '', account_id: ''
     });
 
-    // ✨ NEW: useEffect hook for the "Smart Reset" logic.
-    // This watches for changes in the form's category field.
     useEffect(() => {
-        // If the currently selected category is NOT in our list of person-specific categories...
         if (!personCategories.includes(formData.category)) {
-            // ...then we automatically clear the 'person' field.
             setFormData(prevData => ({ ...prevData, person: '' }));
         }
-    }, [formData.category]); // This dependency means the code only runs when formData.category changes.
+    }, [formData.category]);
 
 
     const loadData = async () => {
@@ -235,9 +230,25 @@ const BudgetDashboard = () => {
         return Array.from(allCategories).sort();
     }, [transactions]);
 
+    // ✨ NEW: Calculate totals for the filtered transactions using useMemo for efficiency.
+    const filteredTotals = useMemo(() => {
+        return transactions.reduce((acc, curr) => {
+            if (curr.type === 'income') {
+                acc.income += curr.amount;
+            } else if (curr.type === 'expense') {
+                acc.expense += curr.amount;
+            }
+            acc.net = acc.income - acc.expense;
+            return acc;
+        }, { income: 0, expense: 0, net: 0 });
+    }, [transactions]); // This calculation only re-runs when the 'transactions' state changes.
+
+    // ✨ NEW: Helper to determine if any filters are currently active.
+    const isFilterActive = useMemo(() => {
+        return filters.search !== '' || filters.type !== '' || filters.category !== '';
+    }, [filters]);
+
     const pieColors = ['#00ff88', '#ff4757', '#00bfff', '#ffa502', '#2ed573', '#ff6348', '#70a1ff'];
-    
-    // ✨ FIX: This variable will now correctly show/hide the Person field based on the selected category.
     const showPersonField = personCategories.includes(formData.category);
 
     if (loading) {
@@ -587,16 +598,19 @@ const BudgetDashboard = () => {
                                         <Input placeholder="Search description, category, person..." className="glass-input pl-10" value={filters.search} onChange={(e) => handleFilterChange('search', e.target.value)} />
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:flex-grow-0">
-                                        <Select value={filters.type} onValueChange={(v) => handleFilterChange('type', v)}>
+                                        <Select value={filters.type} onValueChange={(v) => handleFilterChange('type', v || '')}>
                                             <SelectTrigger className="glass-input"><SelectValue placeholder="All Types" /></SelectTrigger>
                                             <SelectContent className="glass-effect border-0 text-white">
+                                                <SelectItem value="">All Types</SelectItem>
                                                 <SelectItem value="income">Income</SelectItem>
                                                 <SelectItem value="expense">Expense</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        <Select value={filters.category} onValueChange={(v) => handleFilterChange('category', v)}>
+                                        <Select value={filters.category} onValueChange={(v) => handleFilterChange('category', v || '')}>
                                             <SelectTrigger className="glass-input"><SelectValue placeholder="All Categories" /></SelectTrigger>
                                             <SelectContent className="glass-effect border-0 text-white">
+                                                {/* ✨ NEW: "All Categories" option added */}
+                                                <SelectItem value="">All Categories</SelectItem>
                                                 {uniqueCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                                             </SelectContent>
                                         </Select>
@@ -611,6 +625,33 @@ const BudgetDashboard = () => {
                                         </Select>
                                     </div>
                                 </div>
+
+                                {/* ✨ NEW: Dynamic Filter Summary Bar */}
+                                {isFilterActive && (
+                                    <div className="glass-effect p-3 rounded-lg text-sm">
+                                        <p className="text-gray-400 mb-2 text-center">
+                                            Filtered Results ({transactions.length} transaction{transactions.length !== 1 && 's'}):
+                                        </p>
+                                        <div className="flex justify-around items-center gap-4 text-center">
+                                            <div>
+                                                <span className="text-xs text-gray-400 block">Income</span>
+                                                <span className="font-bold income-accent">+${filteredTotals.income.toFixed(2)}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs text-gray-400 block">Expense</span>
+                                                <span className="font-bold expense-accent">-${filteredTotals.expense.toFixed(2)}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-xs text-gray-400 block">Net Total</span>
+                                                <span className={`font-bold ${filteredTotals.net >= 0 ? 'income-accent' : 'expense-accent'}`}>
+                                                    {filteredTotals.net >= 0 ? '+' : ''}${filteredTotals.net.toFixed(2)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+
                                 <div className="space-y-3 max-h-[50vh] overflow-y-auto">
                                     {loading ? (
                                         <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin electric-accent" /></div>
