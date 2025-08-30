@@ -1,7 +1,6 @@
 import axios from 'axios';
 
 // Use an environment variable for the backend URL.
-// This allows it to work both locally and in production.
 const API_URL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const apiClient = axios.create({
@@ -60,14 +59,24 @@ export const authAPI = {
     logout: () => localStorage.removeItem('accessToken')
 };
 
+// ✨ NEW: API for managing accounts
+export const accountAPI = {
+    getAll: () => apiClient.get('/accounts').then(res => res.data),
+    create: (data) => apiClient.post('/accounts', data).then(res => res.data),
+    update: (id, data) => apiClient.put(`/accounts/${id}`, data).then(res => res.data),
+    delete: (id) => apiClient.delete(`/accounts/${id}`).then(res => res.data),
+};
+
 export const transactionAPI = {
   create: (data) => apiClient.post('/transactions/', data).then(res => res.data),
   
-  getAll: (filters = {}) => {
-    const cleanFilters = Object.fromEntries(
-      Object.entries(filters).filter(([_, v]) => v != null && v !== '')
-    );
-    return apiClient.get('/transactions/', { params: cleanFilters }).then(res => res.data);
+  // ✨ UPDATED: To accept an accountId for filtering
+  getAll: (filters = {}, accountId) => {
+    const params = { ...filters };
+    if (accountId && accountId !== 'all') {
+        params.account_id = accountId;
+    }
+    return apiClient.get('/transactions/', { params }).then(res => res.data);
   },
 
   update: (id, data) => apiClient.put(`/transactions/${id}`, data).then(res => res.data),
@@ -76,11 +85,30 @@ export const transactionAPI = {
 };
 
 export const statsAPI = {
-  getMonthlyStats: () => apiClient.get('/stats/monthly').then(res => res.data),
-  getCategoryStats: (type) => apiClient.get('/stats/categories', { params: { type } }).then(res => res.data),
-  getTrendStats: () => apiClient.get('/stats/trends').then(res => res.data),
-  getDashboardStats: () => apiClient.get('/stats/dashboard').then(res => res.data),
-  getPeopleStats: () => apiClient.get('/stats/people').then(res => res.data),
+  // ✨ UPDATED: All stats functions now accept an accountId for filtering
+  getDashboardStats: (accountId) => {
+    const params = accountId && accountId !== 'all' ? { account_id: accountId } : {};
+    return apiClient.get('/stats/dashboard', { params }).then(res => res.data);
+  },
+  getMonthlyStats: (accountId) => {
+    const params = accountId && accountId !== 'all' ? { account_id: accountId } : {};
+    return apiClient.get('/stats/monthly', { params }).then(res => res.data);
+  },
+  getCategoryStats: (type, accountId) => {
+    const params = { type };
+    if (accountId && accountId !== 'all') {
+        params.account_id = accountId;
+    }
+    return apiClient.get('/stats/categories', { params }).then(res => res.data);
+  },
+  getTrendStats: (accountId) => {
+    const params = accountId && accountId !== 'all' ? { account_id: accountId } : {};
+    return apiClient.get('/stats/trends', { params }).then(res => res.data);
+  },
+  getPeopleStats: (accountId) => {
+    const params = accountId && accountId !== 'all' ? { account_id: accountId } : {};
+    return apiClient.get('/stats/people', { params }).then(res => res.data);
+  },
 };
 
 export const peopleAPI = {
@@ -89,9 +117,11 @@ export const peopleAPI = {
 
 const api = {
   auth: authAPI,
+  accounts: accountAPI, // ✨ ADDED
   transactions: transactionAPI,
   stats: statsAPI,
   people: peopleAPI
 };
 
 export default api;
+

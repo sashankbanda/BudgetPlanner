@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, TrendingUp, TrendingDown, DollarSign, BarChart3, PieChart, LineChart, Loader2, LogOut, User, Search, Pencil, Trash2, Users } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, DollarSign, BarChart3, PieChart, LineChart, Loader2, LogOut, User, Search, Pencil, Trash2, Users, Wallet, Settings } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -33,6 +33,12 @@ const BudgetDashboard = () => {
     const { toast } = useToast();
     const navigate = useNavigate();
 
+    // ✨ NEW: State for multi-account functionality
+    const [accounts, setAccounts] = useState([]);
+    const [selectedAccountId, setSelectedAccountId] = useState('all');
+    const [isManageAccountsOpen, setIsManageAccountsOpen] = useState(false);
+    const [newAccountName, setNewAccountName] = useState("");
+
     // State for forms and dialogs
     const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState(null);
@@ -49,22 +55,28 @@ const BudgetDashboard = () => {
     const [formData, setFormData] = useState({
         type: 'expense', category: '', amount: '', description: '',
         date: new Date().toISOString().split('T')[0], customCategory: '',
-        person: '', newPerson: ''
+        person: '', newPerson: '', account_id: ''
     });
 
     const loadData = async () => {
         try {
-            const [transactionsData, dashboardStats, monthlyStats, incomeStats, expenseStats, trendStats, peopleData, peopleStatsData] = await Promise.all([
-                api.transactions.getAll(filters),
-                api.stats.getDashboardStats(),
-                api.stats.getMonthlyStats(),
-                api.stats.getCategoryStats('income'),
-                api.stats.getCategoryStats('expense'),
-                api.stats.getTrendStats(),
+            // ✨ UPDATED: Fetch accounts and pass selectedAccountId to all data-fetching calls
+            const [
+                accountsData, transactionsData, dashboardStats, monthlyStats,
+                incomeStats, expenseStats, trendStats, peopleData, peopleStatsData
+            ] = await Promise.all([
+                api.accounts.getAll(),
+                api.transactions.getAll(filters, selectedAccountId),
+                api.stats.getDashboardStats(selectedAccountId),
+                api.stats.getMonthlyStats(selectedAccountId),
+                api.stats.getCategoryStats('income', selectedAccountId),
+                api.stats.getCategoryStats('expense', selectedAccountId),
+                api.stats.getTrendStats(selectedAccountId),
                 api.people.getAll(),
-                api.stats.getPeopleStats()
+                api.stats.getPeopleStats(selectedAccountId),
             ]);
 
+            setAccounts(accountsData);
             setTransactions(transactionsData);
             setPeople(peopleData);
             setPeopleStats(peopleStatsData);
@@ -72,30 +84,37 @@ const BudgetDashboard = () => {
             setChartData({ monthlyData: monthlyStats.map(item => ({ ...item })), incomeData: incomeStats, expenseData: expenseStats, trendData: trendStats });
         } catch (error) {
             console.error('Error loading data:', error);
-            toast({ title: "Error", description: "Failed to load data. Please refresh the page.", variant: "destructive" });
+            toast({ title: "Error", description: "Failed to load data.", variant: "destructive" });
         } finally {
             setLoading(false);
         }
     };
-
+    
+    // ✨ UPDATED: useEffect now re-fetches data when the selected account changes
     useEffect(() => {
         setLoading(true);
         const handler = setTimeout(() => {
             loadData();
-        }, 500); // Debounce API calls
+        }, 500); // Debounce API calls for filters
         return () => clearTimeout(handler);
-    }, [filters]);
+    }, [filters, selectedAccountId]);
     
     const resetForm = () => {
         setFormData({
             type: 'expense', category: '', amount: '', description: '',
             date: new Date().toISOString().split('T')[0], customCategory: '',
-            person: '', newPerson: ''
+            person: '', newPerson: '', 
+            // ✨ UPDATED: Default to the first account if it exists, otherwise empty
+            account_id: accounts.length > 0 ? accounts[0].id : '' 
         });
         setEditingTransaction(null);
     };
 
     const handleFormSubmit = async () => {
+        // ✨ ADDED: Validation for account_id
+        if (!formData.account_id) {
+            return toast({ title: "Validation Error", description: "Please select an account for this transaction.", variant: "destructive" });
+        }
         const finalCategory = formData.category === 'Custom' ? formData.customCategory : formData.category;
         const finalPerson = formData.person === 'add_new' ? formData.newPerson : formData.person;
 
@@ -112,19 +131,20 @@ const BudgetDashboard = () => {
             amount: parseFloat(formData.amount),
             description: formData.description,
             date: formData.date,
-            person: finalPerson || null
+            person: finalPerson || null,
+            account_id: formData.account_id // ✨ ADDED: Send account_id with the request
         };
 
         try {
             if (editingTransaction) {
                 await api.transactions.update(editingTransaction.id, transactionData);
-                toast({ title: "Success", description: "Transaction updated successfully" });
+                toast({ title: "Success", description: "Transaction updated." });
             } else {
                 await api.transactions.create(transactionData);
-                toast({ title: "Success", description: "Transaction added successfully" });
+                toast({ title: "Success", description: "Transaction added." });
             }
             setIsFormDialogOpen(false);
-            loadData();
+            loadData(); // Reload all data to reflect changes
         } catch (error) {
             console.error('Error submitting form:', error);
             toast({ title: "Error", description: error.message || "Failed to save transaction", variant: "destructive" });
@@ -137,12 +157,9 @@ const BudgetDashboard = () => {
         const categoryExists = allCategories.includes(transaction.category);
 
         setFormData({
-            type: transaction.type,
+            ...transaction,
             category: categoryExists ? transaction.category : 'Custom',
             customCategory: categoryExists ? '' : transaction.category,
-            amount: transaction.amount,
-            description: transaction.description,
-            date: transaction.date,
             person: transaction.person || '',
             newPerson: ''
         });
@@ -159,7 +176,7 @@ const BudgetDashboard = () => {
         try {
             await api.transactions.delete(deletingTransactionId);
             toast({ title: "Success", description: "Transaction deleted." });
-            loadData();
+            loadData(); // Reload data after deletion
         } catch (error) {
             toast({ title: "Error", description: "Failed to delete transaction.", variant: "destructive" });
         } finally {
@@ -167,7 +184,38 @@ const BudgetDashboard = () => {
             setDeletingTransactionId(null);
         }
     };
-
+    
+    // ✨ NEW: Handlers for managing accounts
+    const handleCreateAccount = async () => {
+        if (!newAccountName.trim()) {
+            return toast({ title: "Error", description: "Account name cannot be empty.", variant: "destructive" });
+        }
+        try {
+            const newAccount = await api.accounts.create({ name: newAccountName });
+            toast({ title: "Success", description: "Account created." });
+            setNewAccountName("");
+            // Optimistically update UI and select the new account
+            setAccounts(prev => [...prev, newAccount]); 
+            setSelectedAccountId(newAccount.id);
+        } catch (error) {
+            toast({ title: "Error", description: "Failed to create account.", variant: "destructive" });
+        }
+    };
+    
+    const handleDeleteAccount = async (accountId) => {
+        try {
+            await api.accounts.delete(accountId);
+            toast({ title: "Success", description: "Account and its transactions have been deleted." });
+            // If the deleted account was the selected one, switch back to "All Accounts"
+            if (selectedAccountId === accountId) {
+                setSelectedAccountId('all');
+            } else {
+                loadData(); // otherwise, just reload the data
+            }
+        } catch (error) {
+            toast({ title: "Error", description: "Failed to delete account.", variant: "destructive" });
+        }
+    };
 
     const handleLogout = () => {
         api.auth.logout();
@@ -187,7 +235,7 @@ const BudgetDashboard = () => {
     const pieColors = ['#00ff88', '#ff4757', '#00bfff', '#ffa502', '#2ed573', '#ff6348', '#70a1ff'];
     const showPersonField = personCategories.includes(formData.category);
 
-    if (loading && transactions.length === 0 && !filters.search) {
+    if (loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white flex items-center justify-center">
                 <div className="flex items-center space-x-2">
@@ -206,10 +254,59 @@ const BudgetDashboard = () => {
                         <h1 className="text-3xl sm:text-4xl font-bold electric-accent mb-2">Budget Planner</h1>
                         <p className="text-gray-300 text-sm sm:text-base">Track your finances with futuristic precision</p>
                     </div>
-                    <div className="flex items-center justify-center sm:justify-end gap-4 w-full sm:w-auto">
+                    <div className="flex items-center justify-center sm:justify-end gap-2 sm:gap-4 w-full sm:w-auto">
+                        {/* ✨ ADDED: Account Switcher */}
+                        <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                            <SelectTrigger className="glass-input w-[150px] sm:w-[180px]">
+                                <SelectValue placeholder="Select Account" />
+                            </SelectTrigger>
+                            <SelectContent className="glass-effect border-0 text-white">
+                                <SelectItem value="all">All Accounts</SelectItem>
+                                {accounts.map(acc => (
+                                    <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+
+                        {/* ✨ ADDED: Manage Accounts Button & Dialog */}
+                        <Dialog open={isManageAccountsOpen} onOpenChange={setIsManageAccountsOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="glass-button">
+                                    <Settings className="w-5 h-5" />
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent className="glass-effect border-0 text-white">
+                                <DialogHeader>
+                                    <DialogTitle className="electric-accent">Manage Accounts</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label>Add New Account</Label>
+                                        <div className="flex gap-2">
+                                            <Input className="glass-input" placeholder="e.g., HDFC Savings" value={newAccountName} onChange={e => setNewAccountName(e.target.value)} />
+                                            <Button className="glass-button neon-glow" onClick={handleCreateAccount}>Add</Button>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Existing Accounts</Label>
+                                        <div className="space-y-2 max-h-48 overflow-y-auto p-1">
+                                            {accounts.length > 0 ? accounts.map(acc => (
+                                                <div key={acc.id} className="flex items-center justify-between p-2 glass-effect rounded-md">
+                                                    <span className="flex items-center gap-2"><Wallet className="w-4 h-4" />{acc.name}</span>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500/70 hover:text-red-500" onClick={() => handleDeleteAccount(acc.id)}>
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            )) : <p className="text-sm text-gray-400 text-center py-4">No accounts created yet.</p>}
+                                        </div>
+                                    </div>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
+                        
                         <Dialog open={isFormDialogOpen} onOpenChange={(isOpen) => { setIsFormDialogOpen(isOpen); if (!isOpen) resetForm(); }}>
                             <DialogTrigger asChild>
-                                <Button className="glass-button electric-glow flex-grow sm:flex-grow-0">
+                                <Button className="glass-button electric-glow flex-grow sm:flex-grow-0" disabled={accounts.length === 0}>
                                     <Plus className="w-4 h-4 mr-2" />
                                     Add Transaction
                                 </Button>
@@ -219,6 +316,17 @@ const BudgetDashboard = () => {
                                     <DialogTitle className="electric-accent">{editingTransaction ? 'Edit Transaction' : 'Add New Transaction'}</DialogTitle>
                                 </DialogHeader>
                                 <div className="space-y-4">
+                                     <div>
+                                        <Label>Account</Label>
+                                        <Select value={formData.account_id} onValueChange={(value) => setFormData(prev => ({ ...prev, account_id: value }))}>
+                                            <SelectTrigger className="glass-input"><SelectValue placeholder="Select an account..." /></SelectTrigger>
+                                            <SelectContent className="glass-effect border-0 text-white">
+                                                {accounts.map(acc => (
+                                                    <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                     <div>
                                         <Label>Type</Label>
                                         <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value, category: '' }))}>
@@ -284,13 +392,12 @@ const BudgetDashboard = () => {
                                 </div>
                             </DialogContent>
                         </Dialog>
-                        <Button variant="ghost" size="icon" onClick={handleLogout} className="glass-button expense-glow">
-                            <LogOut className="w-5 h-5" />
-                        </Button>
+                        <Button variant="ghost" size="icon" onClick={handleLogout} className="glass-button expense-glow"><LogOut className="w-5 h-5" /></Button>
                     </div>
                 </header>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    {/* Stats Cards */}
                     <Card className="glass-card stat-card">
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between">
@@ -339,14 +446,14 @@ const BudgetDashboard = () => {
 
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
                     <TabsList className="glass-effect p-1 h-auto flex-wrap justify-center">
-                        <TabsTrigger value="overview" className="glass-button data-[state=active]:electric-glow"><BarChart3 className="w-4 h-4 mr-2" />Overview</TabsTrigger>
+                       <TabsTrigger value="overview" className="glass-button data-[state=active]:electric-glow"><BarChart3 className="w-4 h-4 mr-2" />Overview</TabsTrigger>
                         <TabsTrigger value="categories" className="glass-button data-[state=active]:electric-glow"><PieChart className="w-4 h-4 mr-2" />Categories</TabsTrigger>
                         <TabsTrigger value="people" className="glass-button data-[state=active]:electric-glow"><Users className="w-4 h-4 mr-2" />People</TabsTrigger>
                         <TabsTrigger value="trends" className="glass-button data-[state=active]:electric-glow"><LineChart className="w-4 h-4 mr-2" />Trends</TabsTrigger>
                         <TabsTrigger value="transactions" className="glass-button data-[state=active]:electric-glow">Transactions</TabsTrigger>
                     </TabsList>
-
-                    <TabsContent value="overview">
+                    
+<TabsContent value="overview">
                         <Card className="glass-card">
                             <CardHeader><CardTitle className="electric-accent">Monthly Totals</CardTitle></CardHeader>
                             <CardContent>
@@ -541,7 +648,7 @@ const BudgetDashboard = () => {
             </div>
 
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogContent className="glass-card text-white border-0">
+                 <AlertDialogContent className="glass-card text-white border-0">
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription className="text-gray-400">
@@ -559,3 +666,4 @@ const BudgetDashboard = () => {
 };
 
 export default BudgetDashboard;
+
