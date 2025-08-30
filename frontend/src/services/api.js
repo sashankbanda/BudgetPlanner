@@ -63,14 +63,15 @@ export const authAPI = {
 export const transactionAPI = {
   create: (data) => apiClient.post('/transactions/', data).then(res => res.data),
   
-  // UPDATED getAll function to accept a filters object
   getAll: (filters = {}) => {
-    // Remove any null or undefined filter values before sending
     const cleanFilters = Object.fromEntries(
       Object.entries(filters).filter(([_, v]) => v != null && v !== '')
     );
     return apiClient.get('/transactions/', { params: cleanFilters }).then(res => res.data);
   },
+
+  // ✨ ADD THE UPDATE FUNCTION HERE
+  update: (id, data) => apiClient.put(`/transactions/${id}`, data).then(res => res.data),
 
   delete: (id) => apiClient.delete(`/transactions/${id}`).then(res => res.data)
 };
