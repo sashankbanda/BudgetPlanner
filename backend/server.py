@@ -67,8 +67,8 @@ app.add_middleware(
 )
 
 api_router = APIRouter(prefix="/api")
-
-@api_router.get("/health")
+# ✨ UPDATE THIS LINE TO ACCEPT HEAD REQUESTS
+@api_router.get("/health", methods=["GET", "HEAD"])
 async def health_check():
     db = get_database()
     try:
