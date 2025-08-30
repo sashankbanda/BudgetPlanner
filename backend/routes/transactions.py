@@ -16,7 +16,7 @@ async def create_transaction(
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
-    # ✨ ADDED: Verify that the account exists and belongs to the user
+    # Verify that the account exists and belongs to the user
     account = await db.accounts.find_one({"id": transaction_data.account_id, "user_id": user_id})
     if not account:
         raise HTTPException(status_code=404, detail="Account not found for this user")
@@ -36,7 +36,7 @@ async def update_transaction(
     if not update_dict:
         raise HTTPException(status_code=400, detail="No update data provided")
 
-    # ✨ ADDED: If account is being changed, verify the new account exists
+    # If account is being changed, verify the new account exists
     if "account_id" in update_dict:
         account = await db.accounts.find_one({"id": update_dict["account_id"], "user_id": user_id})
         if not account:
@@ -61,7 +61,8 @@ async def update_transaction(
 async def get_transactions(
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    account_id: Optional[str] = Query(None), # ✨ ADDED: Filter by account
+    # ✨ THIS IS THE FIX: The parameter must be defined with Query(default=None)
+    account_id: Optional[str] = Query(default=None),
     limit: int = Query(default=100, ge=1, le=1000),
     search: Optional[str] = None,
     type: Optional[Literal["income", "expense"]] = None,
@@ -70,7 +71,7 @@ async def get_transactions(
 ):
     try:
         query_filter = {"user_id": user_id}
-        # ✨ ADDED: Add account_id to the query if provided
+        # Add account_id to the query if provided
         if account_id:
             query_filter["account_id"] = account_id
         if type:
