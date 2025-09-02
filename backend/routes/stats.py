@@ -54,6 +54,7 @@ async def get_granular_trend_stats(
             "date": "$_id",
             "income": "$income",
             "expense": "$expense",
+            "net": {"$subtract": ["$income", "$expense"]},
             "_id": 0
         }},
         {"$sort": {"date": 1}}

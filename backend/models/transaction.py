@@ -110,3 +110,4 @@ class GranularTrendStats(BaseModel):
     date: str # This will be a day (YYYY-MM-DD), week (YYYY-WW), or month (YYYY-MM)
     income: float = 0.0
     expense: float = 0.0
+    net: float = 0.0
