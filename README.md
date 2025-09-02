@@ -136,3 +136,31 @@ Once both servers are running, you can:
 1.  Open `http://localhost:3000` in your browser.
 2.  Create a new user account or log in with an existing one.
 3.  Start adding accounts and transactions to see your dashboard come to life.
+
+This looks like a Git workflow, but there are a few issues and it's incomplete for committing between branches. Here's a corrected and more complete version:
+
+## Commit Between Branches Commands
+
+```bash
+# Check current branches
+git branch
+```
+
+```bash
+# Switch to feature branch and make changes
+git checkout feat/transaction-features
+# Make your changes here, then:
+git add .
+git commit -m "Your commit message"
+git push origin feat/transaction-features
+```
+
+```bash
+# Switch to another feature branch
+git checkout feat/deploy-settings
+# Make changes, then:
+git add .
+git commit -m "Your commit message" 
+git push origin feat/deploy-settings
+```
+
