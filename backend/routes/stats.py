@@ -1,178 +1,169 @@
-from fastapi import APIRouter, HTTPException, Query
-from typing import List, Literal
-from models.transaction import MonthlyStats, CategoryStats, TrendStats
-from database import db
-from datetime import datetime, timedelta
+from fastapi import APIRouter, HTTPException, Query, Depends
+from typing import List, Literal, Optional
+from models.transaction import MonthlyStats, CategoryStats, TrendStats, PersonStats, GranularTrendStats # <-- MODIFIED
+from database import get_database
+from datetime import datetime, date, timedelta
+from auth import get_current_user_id
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 router = APIRouter(prefix="/stats", tags=["statistics"])
 
+# ✨ NEW: Granular Trends Endpoint ✨
+@router.get("/trends_granular", response_model=List[GranularTrendStats])
+async def get_granular_trend_stats(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    account_id: Optional[str] = Query(None),
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    period: Literal["daily", "weekly", "monthly"] = Query("daily")
+):
+    """
+    Get trend data with granular control over the time period and grouping.
+    - `start_date` & `end_date`: Filter transactions within this range.
+    - `period`: Group data by 'daily', 'weekly', or 'monthly'.
+    """
+    match_query = {
+        "user_id": user_id,
+        "date": {
+            "$gte": start_date.strftime("%Y-%m-%d"),
+            "$lte": end_date.strftime("%Y-%m-%d")
+        }
+    }
+    if account_id:
+        match_query["account_id"] = account_id
+
+    # Determine the grouping format based on the period
+    group_id = {}
+    if period == "daily":
+        group_id = {"$dateToString": {"format": "%Y-%m-%d", "date": {"$toDate": "$date"}}}
+    elif period == "weekly":
+        # Group by the Monday of the week
+        group_id = {"$dateToString": {"format": "%Y-%U", "date": {"$toDate": "$date"}}}
+    elif period == "monthly":
+        group_id = {"$dateToString": {"format": "%Y-%m", "date": {"$toDate": "$date"}}}
+
+    pipeline = [
+        {"$match": match_query},
+        {"$group": {
+            "_id": group_id,
+            "income": {"$sum": {"$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]}},
+            "expense": {"$sum": {"$cond": [{"$eq": ["$type", "expense"]}, "$amount", 0]}}
+        }},
+        {"$project": {
+            "date": "$_id",
+            "income": "$income",
+            "expense": "$expense",
+            "net": {"$subtract": ["$income", "$expense"]},
+            "_id": 0
+        }},
+        {"$sort": {"date": 1}}
+    ]
+
+    cursor = db.transactions.aggregate(pipeline)
+    return [GranularTrendStats(**r) for r in await cursor.to_list(length=None)]
+
+
+# --- EXISTING ENDPOINTS (with old /trends removed) ---
+
 @router.get("/monthly", response_model=List[MonthlyStats])
-async def get_monthly_stats():
-    """Get monthly income/expense statistics"""
-    try:
-        pipeline = [
-            {
-                "$group": {
-                    "_id": "$month",
-                    "income": {
-                        "$sum": {
-                            "$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]
-                        }
-                    },
-                    "expense": {
-                        "$sum": {
-                            "$cond": [{"$eq": ["$type", "expense"]}, "$amount", 0]
-                        }
-                    }
-                }
-            },
-            {
-                "$project": {
-                    "month": "$_id",
-                    "income": "$income",
-                    "expense": "$expense", 
-                    "net": {"$subtract": ["$income", "$expense"]},
-                    "_id": 0
-                }
-            },
-            {
-                "$sort": {"month": 1}
-            }
-        ]
-        
-        cursor = db.transactions.aggregate(pipeline)
-        results = await cursor.to_list(length=None)
-        
-        return [MonthlyStats(**result) for result in results]
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to calculate monthly statistics")
+async def get_monthly_stats(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    account_id: Optional[str] = Query(None)
+):
+    match_query = {"user_id": user_id}
+    if account_id:
+        match_query["account_id"] = account_id
+
+    pipeline = [
+        {"$match": match_query},
+        {"$group": {"_id": "$month", "income": {"$sum": {"$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]}}, "expense": {"$sum": {"$cond": [{"$eq": ["$type", "expense"]}, "$amount", 0]}}}},
+        {"$project": {"month": "$_id", "income": "$income", "expense": "$expense", "net": {"$subtract": ["$income", "$expense"]}, "_id": 0}},
+        {"$sort": {"month": 1}}
+    ]
+    cursor = db.transactions.aggregate(pipeline)
+    return [MonthlyStats(**r) for r in await cursor.to_list(length=None)]
 
 @router.get("/categories", response_model=List[CategoryStats])
-async def get_category_stats(type: Literal["income", "expense"]):
-    """Get category breakdown for income or expenses"""
-    try:
-        pipeline = [
-            {
-                "$match": {"type": type}
-            },
-            {
-                "$group": {
-                    "_id": "$category",
-                    "value": {"$sum": "$amount"},
-                    "count": {"$sum": 1}
-                }
-            },
-            {
-                "$project": {
-                    "name": "$_id",
-                    "value": "$value",
-                    "count": "$count",
-                    "_id": 0
-                }
-            },
-            {
-                "$sort": {"value": -1}
-            }
-        ]
+async def get_category_stats(
+    type: Literal["income", "expense"],
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    account_id: Optional[str] = Query(None)
+):
+    match_query = {"type": type, "user_id": user_id}
+    if account_id:
+        match_query["account_id"] = account_id
         
-        cursor = db.transactions.aggregate(pipeline)
-        results = await cursor.to_list(length=None)
-        
-        return [CategoryStats(**result) for result in results]
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to calculate category statistics")
+    pipeline = [
+        {"$match": match_query},
+        {"$group": {"_id": "$category", "value": {"$sum": "$amount"}, "count": {"$sum": 1}}},
+        {"$project": {"name": "$_id", "value": "$value", "count": "$count", "_id": 0}},
+        {"$sort": {"value": -1}}
+    ]
+    cursor = db.transactions.aggregate(pipeline)
+    return [CategoryStats(**r) for r in await cursor.to_list(length=None)]
 
-@router.get("/trends", response_model=List[TrendStats])
-async def get_trend_stats():
-    """Get spending trend data (net income - expenses per month)"""
-    try:
-        pipeline = [
-            {
-                "$group": {
-                    "_id": "$month",
-                    "income": {
-                        "$sum": {
-                            "$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]
-                        }
-                    },
-                    "expense": {
-                        "$sum": {
-                            "$cond": [{"$eq": ["$type", "expense"]}, "$amount", 0]
-                        }
-                    }
-                }
-            },
-            {
-                "$project": {
-                    "month": "$_id",
-                    "total": {"$subtract": ["$income", "$expense"]},
-                    "_id": 0
-                }
-            },
-            {
-                "$sort": {"month": 1}
-            }
-        ]
+@router.get("/dashboard")
+async def get_dashboard_stats(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    account_id: Optional[str] = Query(None)
+):
+    match_query = {"user_id": user_id}
+    if account_id:
+        match_query["account_id"] = account_id
         
-        cursor = db.transactions.aggregate(pipeline)
-        results = await cursor.to_list(length=None)
-        
-        return [TrendStats(**result) for result in results]
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to calculate trend statistics")
+    pipeline = [
+        {"$match": match_query},
+        {"$group": {
+            "_id": None, 
+            "total_income": {"$sum": {"$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]}}, 
+            "total_expenses": {"$sum": {"$cond": [{"$eq": ["$type", "expense"]}, "$amount", 0]}}, 
+            "transaction_count": {"$sum": 1}
+        }},
+        {"$project": {
+            "total_income": "$total_income", 
+            "total_expenses": "$total_expenses", 
+            "balance": {"$subtract": ["$total_income", "$total_expenses"]}, 
+            "transaction_count": "$transaction_count", 
+            "_id": 0
+        }}
+    ]
+    results = await db.transactions.aggregate(pipeline).to_list(length=1)
+    return results[0] if results else {"total_income": 0.0, "total_expenses": 0.0, "balance": 0.0, "transaction_count": 0}
 
-@router.get("/current-month")
-async def get_current_month_stats():
-    """Get current month statistics for dashboard cards"""
-    try:
-        current_month = datetime.now().strftime("%Y-%m")
-        
-        pipeline = [
-            {
-                "$match": {"month": current_month}
-            },
-            {
-                "$group": {
-                    "_id": None,
-                    "total_income": {
-                        "$sum": {
-                            "$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]
-                        }
-                    },
-                    "total_expenses": {
-                        "$sum": {
-                            "$cond": [{"$eq": ["$type", "expense"]}, "$amount", 0]
-                        }
-                    },
-                    "transaction_count": {"$sum": 1}
-                }
-            },
-            {
-                "$project": {
-                    "total_income": "$total_income",
-                    "total_expenses": "$total_expenses",
-                    "balance": {"$subtract": ["$total_income", "$total_expenses"]},
-                    "transaction_count": "$transaction_count",
-                    "_id": 0
-                }
-            }
-        ]
-        
-        cursor = db.transactions.aggregate(pipeline)
-        results = await cursor.to_list(length=1)
-        
-        if results:
-            return results[0]
-        else:
-            return {
-                "total_income": 0.0,
-                "total_expenses": 0.0, 
-                "balance": 0.0,
-                "transaction_count": 0
-            }
-        
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to calculate current month statistics")
+@router.get("/people", response_model=List[PersonStats])
+async def get_people_stats(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    account_id: Optional[str] = Query(None)
+):
+    match_query = {
+        "user_id": user_id,
+        "person": {"$ne": None, "$exists": True}
+    }
+    if account_id:
+        match_query["account_id"] = account_id
+
+    pipeline = [
+        {"$match": match_query},
+        {"$group": {
+            "_id": "$person",
+            "total_received": {"$sum": {"$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]}},
+            "total_given": {"$sum": {"$cond": [{"$eq": ["$type", "expense"]}, "$amount", 0]}},
+            "transaction_count": {"$sum": 1}
+        }},
+        {"$project": {
+            "name": "$_id",
+            "total_received": "$total_received",
+            "total_given": "$total_given",
+            "net_balance": {"$subtract": ["$total_received", "$total_given"]},
+            "transaction_count": "$transaction_count",
+            "_id": 0
+        }},
+        {"$sort": {"name": 1}}
+    ]
+    cursor = db.transactions.aggregate(pipeline)
+    return [PersonStats(**r) for r in await cursor.to_list(length=None)]

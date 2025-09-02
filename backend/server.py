@@ -1,15 +1,18 @@
-from fastapi import FastAPI, APIRouter # Corrected typo here
+from fastapi import FastAPI, APIRouter
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 import os
 import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
-from database import db, client
+from database import connect_to_database, close_database_connection, get_database
 
 # Import route modules
 from routes.transactions import router as transactions_router
 from routes.stats import router as stats_router
+from routes.users import router as users_router
+from routes.people import router as people_router
+from routes.accounts import router as accounts_router # ✨ ADDED
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -21,16 +24,23 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
-# This new lifespan function replaces the old startup and shutdown events
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Code to run on startup
     logger.info("Budget Planner API starting up...")
+    await connect_to_database()
+    db = get_database()
     try:
-        await db.transactions.create_index([("month", 1), ("type", 1)])
-        await db.transactions.create_index([("date", -1)])
-        await db.transactions.create_index([("category", 1), ("type", 1)])
+        # Indexes for transactions
+        await db.transactions.create_index([("user_id", 1), ("account_id", 1)])
+        await db.transactions.create_index([("user_id", 1), ("date", -1)])
+        
+        # Index for users
+        await db.users.create_index([("email", 1)], unique=True)
+
+        # ✨ ADDED: Index for accounts
+        await db.accounts.create_index([("user_id", 1)])
+
         logger.info("Database indexes created successfully")
     except Exception as e:
         logger.warning(f"Could not create indexes: {e}")
@@ -39,48 +49,44 @@ async def lifespan(app: FastAPI):
 
     # Code to run on shutdown
     logger.info("Shutting down Budget Planner API...")
-    client.close()
+    await close_database_connection()
 
-# Create the main app and pass in the lifespan handler
 app = FastAPI(lifespan=lifespan)
 
-# Create a router with the /api prefix
-api_router = APIRouter(prefix="/api")
+# --- CORS Configuration Update ---
+allowed_origins = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://allocash.netlify.app",
+    "https://allocash.netlify.app/login"
+]
 
-# Health check endpoint
-@api_router.get("/")
-async def root():
-    return {"message": "Budget Planner API is running", "status": "healthy"}
-
-@api_router.get("/health")
-async def health_check():
-    try:
-        # Test database connection
-        await db.transactions.count_documents({})
-        return {
-            "status": "healthy",
-            "database": "connected",
-            "message": "All systems operational"
-        }
-    except Exception as e:
-        return {
-            "status": "unhealthy", 
-            "database": "disconnected",
-            "error": str(e)
-        }
-
-# Include feature routers
-api_router.include_router(transactions_router)
-api_router.include_router(stats_router)
-
-# Include the main API router in the app
-app.include_router(api_router)
-
-# CORS middleware
 app.add_middleware(
     CORSMiddleware,
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# --- End of CORS Configuration Update ---
+
+api_router = APIRouter(prefix="/api")
+
+@api_router.api_route("/health", methods=["GET", "HEAD"])
+async def health_check():
+    db = get_database()
+    try:
+        await db.command('ping')
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
+
+# Include all routers
+api_router.include_router(accounts_router) # ✨ ADDED
+api_router.include_router(users_router)
+api_router.include_router(people_router)
+api_router.include_router(transactions_router)
+api_router.include_router(stats_router)
+
+app.include_router(api_router)
+
