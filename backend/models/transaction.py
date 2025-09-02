@@ -105,6 +105,11 @@ class PersonStats(BaseModel):
     net_balance: float = 0.0
     transaction_count: int = 0
 
+# ✨ ADD THIS NEW MODEL AT THE END OF THE FILE ✨
+class SettleUpPayload(BaseModel):
+    """Defines the data required to settle a balance with a person."""
+    account_id: str
+
 # ✨ NEW: Pydantic model for our new granular trend data ✨
 class GranularTrendStats(BaseModel):
     date: str # This will be a day (YYYY-MM-DD), week (YYYY-WW), or month (YYYY-MM)
