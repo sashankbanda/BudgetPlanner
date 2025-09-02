@@ -12,7 +12,7 @@ from routes.transactions import router as transactions_router
 from routes.stats import router as stats_router
 from routes.users import router as users_router
 from routes.people import router as people_router
-from routes.accounts import router as accounts_router # ✨ ADDED
+from routes.accounts import router as accounts_router  # ✨ ADDED
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -58,7 +58,9 @@ allowed_origins = [
     "http://localhost:3000",
     "http://localhost:3001",
     "https://allocash.netlify.app",
-    "https://allocash.netlify.app/login"
+     "https://allocash.netlify.app/login"
+    # The preview URL was removed in the new version.
+    # Add your future Netlify URL here, e.g., "https://your-app-name.netlify.app"
 ]
 
 app.add_middleware(
@@ -82,11 +84,10 @@ async def health_check():
         return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
 
 # Include all routers
-api_router.include_router(accounts_router) # ✨ ADDED
+api_router.include_router(accounts_router)  # ✨ ADDED
 api_router.include_router(users_router)
 api_router.include_router(people_router)
 api_router.include_router(transactions_router)
 api_router.include_router(stats_router)
 
 app.include_router(api_router)
-
