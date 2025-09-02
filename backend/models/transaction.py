@@ -105,3 +105,8 @@ class PersonStats(BaseModel):
     net_balance: float = 0.0
     transaction_count: int = 0
 
+# ✨ NEW: Pydantic model for our new granular trend data ✨
+class GranularTrendStats(BaseModel):
+    date: str # This will be a day (YYYY-MM-DD), week (YYYY-WW), or month (YYYY-MM)
+    income: float = 0.0
+    expense: float = 0.0

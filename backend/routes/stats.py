@@ -1,25 +1,82 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Literal, Optional
-from models.transaction import MonthlyStats, CategoryStats, TrendStats, PersonStats
+from models.transaction import MonthlyStats, CategoryStats, TrendStats, PersonStats, GranularTrendStats # <-- MODIFIED
 from database import get_database
-from datetime import datetime
+from datetime import datetime, date, timedelta
 from auth import get_current_user_id
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 router = APIRouter(prefix="/stats", tags=["statistics"])
 
+# ✨ NEW: Granular Trends Endpoint ✨
+@router.get("/trends_granular", response_model=List[GranularTrendStats])
+async def get_granular_trend_stats(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    account_id: Optional[str] = Query(None),
+    start_date: date = Query(...),
+    end_date: date = Query(...),
+    period: Literal["daily", "weekly", "monthly"] = Query("daily")
+):
+    """
+    Get trend data with granular control over the time period and grouping.
+    - `start_date` & `end_date`: Filter transactions within this range.
+    - `period`: Group data by 'daily', 'weekly', or 'monthly'.
+    """
+    match_query = {
+        "user_id": user_id,
+        "date": {
+            "$gte": start_date.strftime("%Y-%m-%d"),
+            "$lte": end_date.strftime("%Y-%m-%d")
+        }
+    }
+    if account_id:
+        match_query["account_id"] = account_id
+
+    # Determine the grouping format based on the period
+    group_id = {}
+    if period == "daily":
+        group_id = {"$dateToString": {"format": "%Y-%m-%d", "date": {"$toDate": "$date"}}}
+    elif period == "weekly":
+        # Group by the Monday of the week
+        group_id = {"$dateToString": {"format": "%Y-%U", "date": {"$toDate": "$date"}}}
+    elif period == "monthly":
+        group_id = {"$dateToString": {"format": "%Y-%m", "date": {"$toDate": "$date"}}}
+
+    pipeline = [
+        {"$match": match_query},
+        {"$group": {
+            "_id": group_id,
+            "income": {"$sum": {"$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]}},
+            "expense": {"$sum": {"$cond": [{"$eq": ["$type", "expense"]}, "$amount", 0]}}
+        }},
+        {"$project": {
+            "date": "$_id",
+            "income": "$income",
+            "expense": "$expense",
+            "_id": 0
+        }},
+        {"$sort": {"date": 1}}
+    ]
+
+    cursor = db.transactions.aggregate(pipeline)
+    return [GranularTrendStats(**r) for r in await cursor.to_list(length=None)]
+
+
+# --- EXISTING ENDPOINTS (with old /trends removed) ---
+
 @router.get("/monthly", response_model=List[MonthlyStats])
 async def get_monthly_stats(
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    account_id: Optional[str] = Query(None) # ✨ ADDED
+    account_id: Optional[str] = Query(None)
 ):
     match_query = {"user_id": user_id}
-    if account_id: # ✨ ADDED
+    if account_id:
         match_query["account_id"] = account_id
 
     pipeline = [
-        {"$match": match_query}, # ✨ UPDATED
+        {"$match": match_query},
         {"$group": {"_id": "$month", "income": {"$sum": {"$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]}}, "expense": {"$sum": {"$cond": [{"$eq": ["$type", "expense"]}, "$amount", 0]}}}},
         {"$project": {"month": "$_id", "income": "$income", "expense": "$expense", "net": {"$subtract": ["$income", "$expense"]}, "_id": 0}},
         {"$sort": {"month": 1}}
@@ -32,14 +89,14 @@ async def get_category_stats(
     type: Literal["income", "expense"],
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    account_id: Optional[str] = Query(None) # ✨ ADDED
+    account_id: Optional[str] = Query(None)
 ):
     match_query = {"type": type, "user_id": user_id}
-    if account_id: # ✨ ADDED
+    if account_id:
         match_query["account_id"] = account_id
         
     pipeline = [
-        {"$match": match_query}, # ✨ UPDATED
+        {"$match": match_query},
         {"$group": {"_id": "$category", "value": {"$sum": "$amount"}, "count": {"$sum": 1}}},
         {"$project": {"name": "$_id", "value": "$value", "count": "$count", "_id": 0}},
         {"$sort": {"value": -1}}
@@ -47,37 +104,18 @@ async def get_category_stats(
     cursor = db.transactions.aggregate(pipeline)
     return [CategoryStats(**r) for r in await cursor.to_list(length=None)]
 
-@router.get("/trends", response_model=List[TrendStats])
-async def get_trend_stats(
-    user_id: str = Depends(get_current_user_id),
-    db: AsyncIOMotorDatabase = Depends(get_database),
-    account_id: Optional[str] = Query(None) # ✨ ADDED
-):
-    match_query = {"user_id": user_id}
-    if account_id: # ✨ ADDED
-        match_query["account_id"] = account_id
-
-    pipeline = [
-        {"$match": match_query}, # ✨ UPDATED
-        {"$group": {"_id": "$month", "income": {"$sum": {"$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]}}, "expense": {"$sum": {"$cond": [{"$eq": ["$type", "expense"]}, "$amount", 0]}}}},
-        {"$project": {"month": "$_id", "total": {"$subtract": ["$income", "$expense"]}, "_id": 0}},
-        {"$sort": {"month": 1}}
-    ]
-    cursor = db.transactions.aggregate(pipeline)
-    return [TrendStats(**r) for r in await cursor.to_list(length=None)]
-
 @router.get("/dashboard")
 async def get_dashboard_stats(
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    account_id: Optional[str] = Query(None) # ✨ ADDED
+    account_id: Optional[str] = Query(None)
 ):
     match_query = {"user_id": user_id}
-    if account_id: # ✨ ADDED
+    if account_id:
         match_query["account_id"] = account_id
         
     pipeline = [
-        {"$match": match_query}, # ✨ UPDATED
+        {"$match": match_query},
         {"$group": {
             "_id": None, 
             "total_income": {"$sum": {"$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]}}, 
@@ -99,17 +137,17 @@ async def get_dashboard_stats(
 async def get_people_stats(
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database),
-    account_id: Optional[str] = Query(None) # ✨ ADDED
+    account_id: Optional[str] = Query(None)
 ):
     match_query = {
         "user_id": user_id,
         "person": {"$ne": None, "$exists": True}
     }
-    if account_id: # ✨ ADDED
+    if account_id:
         match_query["account_id"] = account_id
 
     pipeline = [
-        {"$match": match_query}, # ✨ UPDATED
+        {"$match": match_query},
         {"$group": {
             "_id": "$person",
             "total_received": {"$sum": {"$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]}},
@@ -128,4 +166,3 @@ async def get_people_stats(
     ]
     cursor = db.transactions.aggregate(pipeline)
     return [PersonStats(**r) for r in await cursor.to_list(length=None)]
-
