@@ -1,6 +1,8 @@
+// frontend/src/components/BudgetDashboard.js (After full refactor)
+
 import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '../components/ui/alert-dialog';
 import { useBudgetData } from '../hooks/useBudgetData';
 import DashboardHeader from '../components/dashboard/DashboardHeader';
 import StatCards from '../components/dashboard/StatCards';
@@ -9,19 +11,10 @@ import DashboardTabs from '../components/dashboard/DashboardTabs';
 const BudgetDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview');
 
-    const {
-        transactions, people, loading, stats, chartData, peopleStats, accounts,
-        selectedAccountId, isManageAccountsOpen, newAccountName, isFormDialogOpen,
-        editingTransaction, isDeleteDialogOpen, filters, formData,
-        setSelectedAccountId, setIsManageAccountsOpen, setNewAccountName, setIsFormDialogOpen,
-        setIsDeleteDialogOpen, setFormData,
-        handleLogout, handleCreateAccount, handleDeleteAccount, resetForm,
-        handleFormSubmit, handleEditClick, handleDeleteClick, handleDeleteConfirm,
-        handleFilterChange,
-        uniqueCategories, filteredTotals, isFilterActive,
-    } = useBudgetData();
+    // All the complex logic is now neatly contained in this one hook!
+    const budgetData = useBudgetData();
 
-    if (loading) {
+    if (budgetData.loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white flex items-center justify-center">
                 <div className="flex items-center space-x-2">
@@ -35,60 +28,32 @@ const BudgetDashboard = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white p-2 sm:p-4">
             <div className="max-w-7xl mx-auto">
-                <DashboardHeader
-                    accounts={accounts}
-                    selectedAccountId={selectedAccountId}
-                    setSelectedAccountId={setSelectedAccountId}
-                    isManageAccountsOpen={isManageAccountsOpen}
-                    setIsManageAccountsOpen={setIsManageAccountsOpen}
-                    newAccountName={newAccountName}
-                    setNewAccountName={setNewAccountName}
-                    handleCreateAccount={handleCreateAccount}
-                    handleDeleteAccount={handleDeleteAccount}
-                    isFormDialogOpen={isFormDialogOpen}
-                    setIsFormDialogOpen={setIsFormDialogOpen}
-                    resetForm={resetForm}
-                    formData={formData}
-                    setFormData={setFormData}
-                    editingTransaction={editingTransaction}
-                    handleFormSubmit={handleFormSubmit}
-                    people={people}
-                    handleLogout={handleLogout}
-                />
+                
+                <DashboardHeader {...budgetData} />
 
-                <StatCards stats={stats} />
+                <StatCards stats={budgetData.stats} />
                 
                 <DashboardTabs
                     activeTab={activeTab}
                     setActiveTab={setActiveTab}
-                    chartData={chartData}
-                    peopleStats={peopleStats}
-                    transactions={transactions}
-                    loading={loading}
-                    handleEditClick={handleEditClick}
-                    handleDeleteClick={handleDeleteClick}
-                    filters={filters}
-                    handleFilterChange={handleFilterChange}
-                    uniqueCategories={uniqueCategories}
-                    isFilterActive={isFilterActive}
-                    filteredTotals={filteredTotals}
+                    {...budgetData}
                 />
 
             </div>
 
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                 <AlertDialogContent className="glass-card text-white border-0">
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription className="text-gray-400">
-                            This action cannot be undone. This will permanently delete this transaction from our servers.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel className="glass-button">Cancel</AlertDialogCancel>
-                        <AlertDialogAction className="glass-button expense-glow" onClick={handleDeleteConfirm}>Continue</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
+            <AlertDialog open={budgetData.isDeleteDialogOpen} onOpenChange={budgetData.setIsDeleteDialogOpen}>
+               <AlertDialogContent className="glass-card text-white border-0">
+                 <AlertDialogHeader>
+                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                   <AlertDialogDescription className="text-gray-400">
+                     This action cannot be undone. This will permanently delete this transaction from our servers.
+                   </AlertDialogDescription>
+                 </AlertDialogHeader>
+                 <AlertDialogFooter>
+                   <AlertDialogCancel className="glass-button">Cancel</AlertDialogCancel>
+                   <AlertDialogAction className="glass-button expense-glow" onClick={budgetData.handleDeleteConfirm}>Continue</AlertDialogAction>
+                 </AlertDialogFooter>
+               </AlertDialogContent>
             </AlertDialog>
         </div>
     );

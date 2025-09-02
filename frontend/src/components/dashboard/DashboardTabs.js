@@ -137,7 +137,7 @@ const DashboardTabs = ({
                                 <XAxis dataKey="month" stroke="#ffffff" />
                                 <YAxis stroke="#ffffff" />
                                 <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
-                                <Line type="monotone" dataKey="net" stroke={COLORS.electric} strokeWidth={3} />
+                                <Line type="monotone" dataKey="total" stroke={COLORS.electric} strokeWidth={3} />
                             </LineChart>
                         </ResponsiveContainer>
                     </CardContent>

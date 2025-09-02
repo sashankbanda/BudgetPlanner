@@ -1,8 +1,9 @@
 import React from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import BudgetDashboard from './components/BudgetDashboard';
-import AuthPage from './components/AuthPage';
+// import BudgetDashboard from './components/BudgetDashboard';
+import BudgetDashboard from './pages/BudgetDashboard';
+import AuthPage from './pages/AuthPage';
 import { Toaster } from "./components/ui/toaster";
 
 // This component checks if a user is authenticated.
