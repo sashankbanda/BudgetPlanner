@@ -23,5 +23,5 @@ yarn-debug.log*
 yarn-error.log*
 
 # Local components not for deployment
-frontend/src/components/AuthPage.js
-frontend/src/components/BudgetDashboard.js
+./components/AuthPage.js
+./components/BudgetDashboard.js
