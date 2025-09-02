@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, LineChart, Line } from 'recharts';
 import TransactionList from './TransactionList';
 import TrendControls from './TrendControls'; // ✨ IMPORT the new controls component
+import { Button } from '../ui/button'; // ✨ Make sure Button is imported
 
 const COLORS = { income: '#00ff88', expense: '#ff4757', electric: '#00bfff' };
 const pieColors = ['#00ff88', '#ff4757', '#00bfff', '#ffa502', '#2ed573', '#ff6348', '#70a1ff'];
@@ -13,7 +14,7 @@ const DashboardTabs = ({
     activeTab, setActiveTab, chartData, peopleStats,
     transactions, loading, handleEditClick, handleDeleteClick,
     filters, handleFilterChange, uniqueCategories, isFilterActive, filteredTotals,
-    trendPeriod, setTrendPeriod, trendDateRange, setTrendDateRange
+    trendPeriod, setTrendPeriod, trendDateRange, setTrendDateRange,onSettleUpClick // ✨ RECEIVE the new prop
 }) => {
     return (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -134,6 +135,16 @@ const DashboardTabs = ({
                                             <p className="text-xs text-center text-gray-500 mt-1">
                                                 {person.net_balance > 0 ? `${person.name} owes you.` : person.net_balance < 0 ? `You owe ${person.name}.` : 'Settled up.'}
                                             </p>
+                                        </div>
+                                        {/* ✨ ADDED: Settle Up Button ✨ */}
+                                        <div className="mt-4">
+                                            <Button 
+                                                className="w-full glass-button neon-glow"
+                                                disabled={Math.abs(person.net_balance) < 0.01}
+                                                onClick={() => onSettleUpClick(person)}
+                                            >
+                                                Settle Up
+                                            </Button>
                                         </div>
                                     </Card>
                                 ))}

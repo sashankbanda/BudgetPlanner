@@ -114,6 +114,7 @@ export const useBudgetData = () => {
         setEditingTransaction(null);
     };
 
+
     const handleFormSubmit = async () => {
         if (!formData.account_id) {
             return toast({ title: "Validation Error", description: "Please select an account for this transaction.", variant: "destructive" });
@@ -212,6 +213,20 @@ export const useBudgetData = () => {
             toast({ title: "Error", description: "Failed to delete account.", variant: "destructive" });
         }
     };
+    const handleSettleUp = async (person, account_id) => {
+        if (!account_id) {
+            toast({ title: "Error", description: "No account is available to settle this transaction.", variant: "destructive" });
+            return;
+        }
+        try {
+            await api.people.settleUp(person.name, account_id);
+            toast({ title: "Success!", description: `Balance with ${person.name} has been settled.` });
+            await loadData(); // Refresh all data
+        } catch (error) {
+            console.error("Failed to settle up:", error);
+            toast({ title: "Error", description: `Could not settle up with ${person.name}. ${error.message}`, variant: "destructive" });
+        }
+    };
 
     const handleLogout = () => {
         api.auth.logout();
@@ -251,7 +266,7 @@ export const useBudgetData = () => {
         setIsDeleteDialogOpen, setFormData,
         setTrendPeriod, setTrendDateRange, // ✨ EXPORTED new state setters
 
-        handleLogout, handleCreateAccount, handleDeleteAccount, resetForm,
+        handleSettleUp,handleLogout, handleCreateAccount, handleDeleteAccount, resetForm,
         handleFormSubmit, handleEditClick, handleDeleteClick, handleDeleteConfirm,
         handleFilterChange,
 

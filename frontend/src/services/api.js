@@ -110,7 +110,9 @@ export const statsAPI = {
 };
 
 export const peopleAPI = {
-  getAll: () => apiClient.get('/people').then(res => res.data)
+  getAll: () => apiClient.get('/people').then(res => res.data),
+  // ✨ ADD THIS NEW FUNCTION ✨
+  settleUp: (name, account_id) => apiClient.post(`/people/${name}/settle`, { account_id }).then(res => res.data),
 };
 
 const api = {
