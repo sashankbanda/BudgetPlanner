@@ -16,6 +16,17 @@ const BudgetDashboard = () => {
     const [settlingPerson, setSettlingPerson] = useState(null);
 
     const budgetData = useBudgetData();
+    useEffect(() => {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+            try {
+                const decoded = jwtDecode(token);
+                setIsVerified(decoded.verified);
+            } catch (e) {
+                console.error("Invalid token:", e);
+            }
+        }
+    }, []);
     
     // ✨ ADDED: Handler to open the modal ✨
     const onSettleUpClick = (person) => {
@@ -56,6 +67,25 @@ const BudgetDashboard = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white p-4">
+          <div className="max-w-7xl mx-auto">
+                
+                {/* ✨ DISPLAY BANNER IF NOT VERIFIED ✨ */}
+                {!isVerified && (
+                    <div className="mb-6">
+                        <VerificationBanner />
+                    </div>
+                )}
+                
+                <DashboardHeader {...budgetData} />
+                <StatCards stats={budgetData.stats} />
+                <DashboardTabs
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    onSettleUpClick={onSettleUpClick}
+                    {...budgetData}
+                />
+            </div>
+            
             <div className="max-w-7xl mx-auto">
                 
                 <DashboardHeader {...budgetData} />

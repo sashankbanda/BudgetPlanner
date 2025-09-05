@@ -5,11 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Checkbox } from '../components/ui/checkbox'; // Import Checkbox
 import { useToast } from '../hooks/use-toast';
 import api from '../services/api';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
-import { cn } from '../lib/utils'; // Make sure to import cn
+import { cn } from '../lib/utils';
 
 // Google Icon SVG
 const GoogleIcon = () => (
@@ -21,7 +22,6 @@ const GoogleIcon = () => (
         <path d="M1 1h22v22H1z" fill="none"/>
     </svg>
 );
-
 
 const AuthPage = () => {
     const [activeTab, setActiveTab] = useState('login');
@@ -35,6 +35,7 @@ const AuthPage = () => {
     const [signupEmail, setSignupEmail] = useState('');
     const [signupPassword, setSignupPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [rememberMe, setRememberMe] = useState(true); // State for "Remember Me"
     
     // UI State
     const [showLoginPassword, setShowLoginPassword] = useState(false);
@@ -46,18 +47,9 @@ const AuthPage = () => {
 
     useEffect(() => {
         const newErrors = {};
-        // Email validation
-        if (signupEmail && !/\S+@\S+\.\S+/.test(signupEmail)) {
-            newErrors.signupEmail = 'Please enter a valid email address.';
-        }
-        // Password length validation
-        if (signupPassword && signupPassword.length < 8) {
-            newErrors.signupPassword = 'Password must be at least 8 characters long.';
-        }
-        // Password match validation
-        if (confirmPassword && signupPassword !== confirmPassword) {
-            newErrors.confirmPassword = 'Passwords do not match.';
-        }
+        if (signupEmail && !/\S+@\S+\.\S+/.test(signupEmail)) newErrors.signupEmail = 'Please enter a valid email address.';
+        if (signupPassword && signupPassword.length < 8) newErrors.signupPassword = 'Password must be at least 8 characters long.';
+        if (confirmPassword && signupPassword !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match.';
         setErrors(newErrors);
     }, [signupEmail, signupPassword, confirmPassword]);
 
@@ -65,7 +57,7 @@ const AuthPage = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            await api.auth.login(loginEmail, loginPassword);
+            await api.auth.login(loginEmail, loginPassword, rememberMe); // Pass rememberMe flag
             toast({ title: "Success", description: "Logged in successfully!" });
             navigate('/');
         } catch (error) {
@@ -84,13 +76,23 @@ const AuthPage = () => {
         setLoading(true);
         try {
             await api.auth.signup(signupEmail, signupPassword);
-            toast({ title: "Success", description: "Account created! Please log in." });
-            setActiveTab('login');
+            toast({ title: "Success", description: "Account created! Please check your email for a verification link." });
+            navigate('/'); // Navigate to dashboard for instant access
         } catch (error) {
             toast({ title: "Signup Failed", description: error.message, variant: "destructive" });
         } finally {
             setLoading(false);
         }
+    };
+    
+    const handleForgotPassword = () => {
+        // This is a placeholder for now
+        toast({ title: "Forgot Password", description: "This feature is not yet implemented." });
+    };
+    
+    const handleGoogleSignIn = () => {
+        // This is a placeholder for now
+        toast({ title: "Google Sign-In", description: "This feature is not yet implemented." });
     };
 
     return (
@@ -101,7 +103,6 @@ const AuthPage = () => {
                     <TabsTrigger value="signup" className="glass-button data-[state=active]:electric-glow">Sign Up</TabsTrigger>
                 </TabsList>
                 
-                {/* Login Form */}
                 <TabsContent value="login">
                     <Card className="glass-card border-0">
                         <CardHeader><CardTitle className="electric-accent text-center text-2xl">Welcome Back</CardTitle></CardHeader>
@@ -112,10 +113,7 @@ const AuthPage = () => {
                                     <Input id="login-email" type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required className="glass-input" />
                                 </div>
                                 <div>
-                                    <div className="flex justify-between items-center">
-                                        <Label htmlFor="login-password" className="text-gray-300">Password</Label>
-                                        <a href="#" className="text-xs electric-accent hover:underline">Forgot password?</a>
-                                    </div>
+                                    <Label htmlFor="login-password" className="text-gray-300">Password</Label>
                                     <div className="relative">
                                         <Input id="login-password" type={showLoginPassword ? "text" : "password"} value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required className="glass-input pr-10" />
                                         <button type="button" onClick={() => setShowLoginPassword(!showLoginPassword)} className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white">
@@ -123,16 +121,23 @@ const AuthPage = () => {
                                         </button>
                                     </div>
                                 </div>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox id="remember-me" checked={rememberMe} onCheckedChange={setRememberMe} className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500" />
+                                        <Label htmlFor="remember-me" className="text-xs text-gray-400">Remember Me</Label>
+                                    </div>
+                                    <a href="#" onClick={handleForgotPassword} className="text-xs electric-accent hover:underline">Forgot password?</a>
+                                </div>
                                 <Button type="submit" className="w-full glass-button neon-glow" disabled={loading}>
                                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                     Login
                                 </Button>
                             </form>
-                             <div className="relative my-6">
+                            <div className="relative my-6">
                                 <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-gray-700"></span></div>
                                 <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#191919] px-2 text-gray-400">Or continue with</span></div>
                             </div>
-                            <Button variant="outline" className="w-full glass-button items-center gap-2">
+                            <Button variant="outline" className="w-full glass-button items-center gap-2" onClick={handleGoogleSignIn}>
                                 <GoogleIcon />
                                 Sign in with Google
                             </Button>
@@ -140,7 +145,6 @@ const AuthPage = () => {
                     </Card>
                 </TabsContent>
 
-                {/* Signup Form */}
                 <TabsContent value="signup">
                     <Card className="glass-card border-0">
                         <CardHeader><CardTitle className="electric-accent text-center text-2xl">Create Account</CardTitle></CardHeader>
@@ -153,7 +157,7 @@ const AuthPage = () => {
                                 </div>
                                 <div>
                                     <Label htmlFor="signup-password" className="text-gray-300">Password</Label>
-                                     <div className="relative">
+                                    <div className="relative">
                                         <Input id="signup-password" type={showSignupPassword ? "text" : "password"} value={signupPassword} onChange={(e) => setSignupPassword(e.target.value)} required className={cn("glass-input pr-10", errors.signupPassword && "border-red-500")} />
                                         <button type="button" onClick={() => setShowSignupPassword(!showSignupPassword)} className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white">
                                             {showSignupPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -166,7 +170,7 @@ const AuthPage = () => {
                                     <Label htmlFor="confirm-password" className="text-gray-300">Confirm Password</Label>
                                     <div className="relative">
                                         <Input id="confirm-password" type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className={cn("glass-input pr-10", errors.confirmPassword && "border-red-500")} />
-                                         <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white">
+                                        <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white">
                                             {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                         </button>
                                     </div>
@@ -177,14 +181,6 @@ const AuthPage = () => {
                                     Sign Up
                                 </Button>
                             </form>
-                             <div className="relative my-6">
-                                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-gray-700"></span></div>
-                                <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#191919] px-2 text-gray-400">Or continue with</span></div>
-                            </div>
-                            <Button variant="outline" className="w-full glass-button items-center gap-2">
-                                <GoogleIcon />
-                                Sign in with Google
-                            </Button>
                         </CardContent>
                     </Card>
                 </TabsContent>
