@@ -5,12 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Checkbox } from '../components/ui/checkbox'; // Import Checkbox
 import { useToast } from '../hooks/use-toast';
 import api from '../services/api';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
 import { cn } from '../lib/utils';
+import { Checkbox } from '../components/ui/checkbox';
 
 // Google Icon SVG
 const GoogleIcon = () => (
@@ -32,10 +32,10 @@ const AuthPage = () => {
     // Form State
     const [loginEmail, setLoginEmail] = useState('');
     const [loginPassword, setLoginPassword] = useState('');
+    const [rememberMe, setRememberMe] = useState(true); // Default to true for convenience
     const [signupEmail, setSignupEmail] = useState('');
     const [signupPassword, setSignupPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [rememberMe, setRememberMe] = useState(true); // State for "Remember Me"
     
     // UI State
     const [showLoginPassword, setShowLoginPassword] = useState(false);
@@ -47,9 +47,15 @@ const AuthPage = () => {
 
     useEffect(() => {
         const newErrors = {};
-        if (signupEmail && !/\S+@\S+\.\S+/.test(signupEmail)) newErrors.signupEmail = 'Please enter a valid email address.';
-        if (signupPassword && signupPassword.length < 8) newErrors.signupPassword = 'Password must be at least 8 characters long.';
-        if (confirmPassword && signupPassword !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match.';
+        if (signupEmail && !/\S+@\S+\.\S+/.test(signupEmail)) {
+            newErrors.signupEmail = 'Please enter a valid email address.';
+        }
+        if (signupPassword && signupPassword.length < 8) {
+            newErrors.signupPassword = 'Password must be at least 8 characters long.';
+        }
+        if (confirmPassword && signupPassword !== confirmPassword) {
+            newErrors.confirmPassword = 'Passwords do not match.';
+        }
         setErrors(newErrors);
     }, [signupEmail, signupPassword, confirmPassword]);
 
@@ -57,7 +63,7 @@ const AuthPage = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            await api.auth.login(loginEmail, loginPassword, rememberMe); // Pass rememberMe flag
+            await api.auth.login(loginEmail, loginPassword, rememberMe);
             toast({ title: "Success", description: "Logged in successfully!" });
             navigate('/');
         } catch (error) {
@@ -69,31 +75,45 @@ const AuthPage = () => {
 
     const handleSignup = async (e) => {
         e.preventDefault();
-        if (Object.keys(errors).length > 0) {
-            toast({ title: "Validation Error", description: "Please fix the errors before submitting.", variant: "destructive" });
+        if (Object.keys(errors).length > 0 || !signupEmail || !signupPassword || !confirmPassword) {
+            toast({ title: "Validation Error", description: "Please fix the errors and fill all fields before submitting.", variant: "destructive" });
             return;
         }
         setLoading(true);
         try {
             await api.auth.signup(signupEmail, signupPassword);
-            toast({ title: "Success", description: "Account created! Please check your email for a verification link." });
-            navigate('/'); // Navigate to dashboard for instant access
+            // After successful signup, they are auto-logged in.
+            toast({ title: "Welcome!", description: "Account created successfully." });
+            navigate('/'); // Redirect to dashboard immediately
         } catch (error) {
             toast({ title: "Signup Failed", description: error.message, variant: "destructive" });
         } finally {
             setLoading(false);
         }
     };
-    
-    const handleForgotPassword = () => {
-        // This is a placeholder for now
-        toast({ title: "Forgot Password", description: "This feature is not yet implemented." });
+
+    const handleGoogleLogin = () => {
+        const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+        // This MUST match the URI you set in your Google Cloud Console
+        const redirectUri = "https://allocash.netlify.app/auth/callback";
+        
+        const rootUrl = "https://accounts.google.com/o/oauth2/v2/auth";
+        const options = {
+            redirect_uri: redirectUri,
+            client_id: googleClientId,
+            access_type: "offline",
+            response_type: "code",
+            prompt: "consent",
+            scope: [
+                "https://www.googleapis.com/auth/userinfo.profile",
+                "https://www.googleapis.com/auth/userinfo.email",
+            ].join(" "),
+        };
+        
+        const qs = new URLSearchParams(options).toString();
+        window.location.href = `${rootUrl}?${qs}`;
     };
-    
-    const handleGoogleSignIn = () => {
-        // This is a placeholder for now
-        toast({ title: "Google Sign-In", description: "This feature is not yet implemented." });
-    };
+
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white flex items-center justify-center p-4">
@@ -103,6 +123,7 @@ const AuthPage = () => {
                     <TabsTrigger value="signup" className="glass-button data-[state=active]:electric-glow">Sign Up</TabsTrigger>
                 </TabsList>
                 
+                {/* Login Form */}
                 <TabsContent value="login">
                     <Card className="glass-card border-0">
                         <CardHeader><CardTitle className="electric-accent text-center text-2xl">Welcome Back</CardTitle></CardHeader>
@@ -113,7 +134,10 @@ const AuthPage = () => {
                                     <Input id="login-email" type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required className="glass-input" />
                                 </div>
                                 <div>
-                                    <Label htmlFor="login-password" className="text-gray-300">Password</Label>
+                                    <div className="flex justify-between items-center">
+                                        <Label htmlFor="login-password" className="text-gray-300">Password</Label>
+                                        <a href="#" className="text-xs electric-accent hover:underline">Forgot password?</a>
+                                    </div>
                                     <div className="relative">
                                         <Input id="login-password" type={showLoginPassword ? "text" : "password"} value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required className="glass-input pr-10" />
                                         <button type="button" onClick={() => setShowLoginPassword(!showLoginPassword)} className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white">
@@ -121,12 +145,9 @@ const AuthPage = () => {
                                         </button>
                                     </div>
                                 </div>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-2">
-                                        <Checkbox id="remember-me" checked={rememberMe} onCheckedChange={setRememberMe} className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500" />
-                                        <Label htmlFor="remember-me" className="text-xs text-gray-400">Remember Me</Label>
-                                    </div>
-                                    <a href="#" onClick={handleForgotPassword} className="text-xs electric-accent hover:underline">Forgot password?</a>
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox id="remember-me" checked={rememberMe} onCheckedChange={setRememberMe} className="border-gray-600 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500" />
+                                    <Label htmlFor="remember-me" className="text-sm font-medium leading-none text-gray-400">Remember me</Label>
                                 </div>
                                 <Button type="submit" className="w-full glass-button neon-glow" disabled={loading}>
                                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -137,7 +158,7 @@ const AuthPage = () => {
                                 <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-gray-700"></span></div>
                                 <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#191919] px-2 text-gray-400">Or continue with</span></div>
                             </div>
-                            <Button variant="outline" className="w-full glass-button items-center gap-2" onClick={handleGoogleSignIn}>
+                            <Button variant="outline" className="w-full glass-button items-center gap-2" onClick={handleGoogleLogin}>
                                 <GoogleIcon />
                                 Sign in with Google
                             </Button>
@@ -145,6 +166,7 @@ const AuthPage = () => {
                     </Card>
                 </TabsContent>
 
+                {/* Signup Form */}
                 <TabsContent value="signup">
                     <Card className="glass-card border-0">
                         <CardHeader><CardTitle className="electric-accent text-center text-2xl">Create Account</CardTitle></CardHeader>
