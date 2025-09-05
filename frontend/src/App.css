@@ -11,6 +11,11 @@
     }
 }
 
+/* Add this class if it doesn't exist, or modify the existing one */
+.App {
+    overflow-x: hidden; /* This will prevent horizontal scrolling */
+}
+
 .App-header {
     background-color: #0f0f10;
     min-height: 100vh;
