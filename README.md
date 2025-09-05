@@ -164,3 +164,38 @@ git commit -m "Your commit message"
 git push origin feat/deploy-settings
 ```
 
+Here are the Git commands to get your updated data from those branches into the main branch:
+
+## Option 1: Merge (Recommended for most cases)
+```bash
+# Switch to main branch
+git checkout main
+
+# Pull latest changes from remote main (if working with remote)
+git pull origin main
+
+# Merge the first feature branch
+git merge feat/deploy-settings
+
+# Merge the second feature branch
+git merge feat/transaction-features
+
+# Push to remote (if working with remote repository)
+git push origin main
+```
+
+## Additional useful commands:
+```bash
+# Check status before merging
+git status
+
+# View differences before merging
+git diff feat/deploy-settings main
+git diff feat/transaction-features main
+
+# If you encounter merge conflicts, resolve them and then:
+git add .
+git commit -m "Resolve merge conflicts"
+```
+
+Choose the option that best fits your workflow and team conventions!
