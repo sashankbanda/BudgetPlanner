@@ -1,16 +1,13 @@
 import React from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-// import BudgetDashboard from './components/BudgetDashboard';
 import BudgetDashboard from './pages/BudgetDashboard';
 import AuthPage from './pages/AuthPage';
+import AuthCallbackPage from './pages/AuthCallbackPage'; // ✨ IMPORT THE NEW PAGE
 import { Toaster } from "./components/ui/toaster";
 
-// This component checks if a user is authenticated.
-// If they are, it renders the requested component (children).
-// If not, it redirects them to the login page.
 const PrivateRoute = ({ children }) => {
-  const token = localStorage.getItem('accessToken');
+  const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
   return token ? children : <Navigate to="/login" />;
 };
 
@@ -19,8 +16,11 @@ function App() {
     <div className="App">
       <BrowserRouter>
         <Routes>
-          {/* Public route for login/signup */}
+          {/* Public routes */}
           <Route path="/login" element={<AuthPage />} />
+          
+          {/* ✨ ADD THIS NEW ROUTE ✨ */}
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
           
           {/* Protected route for the main dashboard */}
           <Route 
@@ -39,3 +39,4 @@ function App() {
 }
 
 export default App;
+
