@@ -34,7 +34,7 @@ apiClient.interceptors.request.use(
           storage.setItem('refreshToken', refresh_token);
           accessToken = access_token;
         } catch (error) {
-          authAPI.logout(); // Clear all tokens on failure
+          authAPI.logout();
           if (window.location.pathname !== '/login') window.location.href = '/login';
           return Promise.reject(error);
         }
@@ -50,7 +50,6 @@ apiClient.interceptors.request.use(
   },
   (error) => Promise.reject(error)
 );
-
 
 export const authAPI = {
     login: async (email, password, rememberMe) => {
@@ -81,13 +80,12 @@ export const authAPI = {
     },
     verifyEmail: (token) => apiClient.get(`/users/verify-email?token=${token}`).then(res => res.data),
     resendVerification: () => apiClient.post('/users/resend-verification').then(res => res.data),
-
-    // ✨ THIS IS THE NEWLY ADDED FUNCTION ✨
-    handleGoogleCallback: async (code) => {
-        const response = await apiClient.post('/users/google-login', { code });
+    
+    // ✨ CHANGE HERE: Send the id_token instead of the code
+    handleGoogleCallback: async (idToken) => {
+        const response = await apiClient.post('/users/google-login', { id_token: idToken });
         const { access_token, refresh_token } = response.data;
         if (access_token && refresh_token) {
-            // Google Sign-In should always be a persistent session
             localStorage.setItem('accessToken', access_token);
             localStorage.setItem('refreshToken', refresh_token);
         }
