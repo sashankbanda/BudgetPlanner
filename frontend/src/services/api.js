@@ -51,20 +51,6 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401 && window.location.pathname !== '/login') {
-        authAPI.logout();
-        window.location.href = '/login';
-    }
-    if (error.response?.data?.detail) {
-      throw new Error(error.response.data.detail);
-    }
-    throw new Error(error.message || 'An unknown error occurred');
-  }
-);
-
 
 export const authAPI = {
     login: async (email, password, rememberMe) => {
@@ -83,7 +69,6 @@ export const authAPI = {
     signup: async (email, password) => {
         const response = await apiClient.post('/users/signup', { email, password });
         const { access_token, refresh_token } = response.data;
-        // Sign up always creates a persistent session by default
         localStorage.setItem('accessToken', access_token);
         localStorage.setItem('refreshToken', refresh_token);
         return response.data;
@@ -96,63 +81,76 @@ export const authAPI = {
     },
     verifyEmail: (token) => apiClient.get(`/users/verify-email?token=${token}`).then(res => res.data),
     resendVerification: () => apiClient.post('/users/resend-verification').then(res => res.data),
+
+    // ✨ THIS IS THE NEWLY ADDED FUNCTION ✨
+    handleGoogleCallback: async (code) => {
+        const response = await apiClient.post('/users/google-login', { code });
+        const { access_token, refresh_token } = response.data;
+        if (access_token && refresh_token) {
+            // Google Sign-In should always be a persistent session
+            localStorage.setItem('accessToken', access_token);
+            localStorage.setItem('refreshToken', refresh_token);
+        }
+        return response.data;
+    },
 };
 
 export const accountAPI = {
     getAll: () => apiClient.get('/accounts').then(res => res.data),
     create: (data) => apiClient.post('/accounts', data).then(res => res.data),
+    update: (id, data) => apiClient.put(`/accounts/${id}`, data).then(res => res.data),
     delete: (id) => apiClient.delete(`/accounts/${id}`).then(res => res.data),
 };
 
 export const transactionAPI = {
-  create: (data) => apiClient.post('/transactions/', data).then(res => res.data),
-  getAll: (filters = {}, accountId) => {
-    const params = { ...filters };
-    if (accountId && accountId !== 'all') {
-        params.account_id = accountId;
-    }
-    return apiClient.get('/transactions/', { params }).then(res => res.data);
-  },
-  update: (id, data) => apiClient.put(`/transactions/${id}`, data).then(res => res.data),
-  delete: (id) => apiClient.delete(`/transactions/${id}`).then(res => res.data)
+    create: (data) => apiClient.post('/transactions/', data).then(res => res.data),
+    getAll: (filters = {}, accountId) => {
+        const params = { ...filters };
+        if (accountId && accountId !== 'all') {
+            params.account_id = accountId;
+        }
+        return apiClient.get('/transactions/', { params }).then(res => res.data);
+    },
+    update: (id, data) => apiClient.put(`/transactions/${id}`, data).then(res => res.data),
+    delete: (id) => apiClient.delete(`/transactions/${id}`).then(res => res.data)
 };
 
 export const statsAPI = {
-  getDashboardStats: (accountId) => {
-    const params = accountId && accountId !== 'all' ? { account_id: accountId } : {};
-    return apiClient.get('/stats/dashboard', { params }).then(res => res.data);
-  },
-  getMonthlyStats: (accountId) => {
-    const params = accountId && accountId !== 'all' ? { account_id: accountId } : {};
-    return apiClient.get('/stats/monthly', { params }).then(res => res.data);
-  },
-  getCategoryStats: (type, accountId) => {
-    const params = { type };
-    if (accountId && accountId !== 'all') {
-        params.account_id = accountId;
-    }
-    return apiClient.get('/stats/categories', { params }).then(res => res.data);
-  },
-  getGranularTrendStats: (params) => {
-    return apiClient.get('/stats/trends_granular', { params }).then(res => res.data);
-  },
-  getPeopleStats: (accountId) => {
-    const params = accountId && accountId !== 'all' ? { account_id: accountId } : {};
-    return apiClient.get('/stats/people', { params }).then(res => res.data);
-  },
+    getDashboardStats: (accountId) => {
+        const params = accountId && accountId !== 'all' ? { account_id: accountId } : {};
+        return apiClient.get('/stats/dashboard', { params }).then(res => res.data);
+    },
+    getMonthlyStats: (accountId) => {
+        const params = accountId && accountId !== 'all' ? { account_id: accountId } : {};
+        return apiClient.get('/stats/monthly', { params }).then(res => res.data);
+    },
+    getCategoryStats: (type, accountId) => {
+        const params = { type };
+        if (accountId && accountId !== 'all') {
+            params.account_id = accountId;
+        }
+        return apiClient.get('/stats/categories', { params }).then(res => res.data);
+    },
+    getGranularTrendStats: (params) => {
+        return apiClient.get('/stats/trends_granular', { params }).then(res => res.data);
+    },
+    getPeopleStats: (accountId) => {
+        const params = accountId && accountId !== 'all' ? { account_id: accountId } : {};
+        return apiClient.get('/stats/people', { params }).then(res => res.data);
+    },
 };
 
 export const peopleAPI = {
-  getAll: () => apiClient.get('/people').then(res => res.data),
-  settleUp: (name, account_id) => apiClient.post(`/people/${name}/settle`, { account_id }).then(res => res.data),
+    getAll: () => apiClient.get('/people').then(res => res.data),
+    settleUp: (name, account_id) => apiClient.post(`/people/${name}/settle`, { account_id }).then(res => res.data),
 };
 
-const api = { 
-  auth: authAPI, 
-  accounts: accountAPI, 
-  transactions: transactionAPI, 
-  stats: statsAPI, 
-  people: peopleAPI 
+const api = {
+    auth: authAPI,
+    accounts: accountAPI,
+    transactions: transactionAPI,
+    stats: statsAPI,
+    people: peopleAPI
 };
 
 export default api;
