@@ -8,12 +8,12 @@ import { format } from 'date-fns';
 
 const TrendControls = ({ trendPeriod, setTrendPeriod, trendDateRange, setTrendDateRange }) => {
     return (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
             <Popover>
                 <PopoverTrigger asChild>
                     <Button
                         variant={"outline"}
-                        className="w-[280px] justify-start text-left font-normal glass-button"
+                        className="w-full sm:w-[280px] justify-start text-left font-normal glass-button"
                     >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {trendDateRange?.from ? (

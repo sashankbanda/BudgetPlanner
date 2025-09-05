@@ -15,7 +15,8 @@ const TransactionList = ({
         <Card className="glass-card">
             <CardHeader><CardTitle className="electric-accent">Transactions History</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-                <div className="glass-effect p-4 space-y-4 md:space-y-0 md:flex md:items-center md:gap-4">
+                {/* Filter Section */}
+                <div className="glass-effect p-4 flex flex-wrap items-center gap-4">
                     <div className="relative flex-grow">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input placeholder="Search description, category, person..." className="glass-input pl-10" value={filters.search} onChange={(e) => handleFilterChange('search', e.target.value)} />
@@ -48,6 +49,7 @@ const TransactionList = ({
                     </div>
                 </div>
 
+                {/* Filtered Results Summary */}
                 {isFilterActive && (
                     <div className="glass-effect p-3 rounded-lg text-sm">
                         <p className="text-gray-400 mb-2 text-center">Filtered Results ({transactions.length} transaction{transactions.length !== 1 && 's'}):</p>
@@ -68,6 +70,7 @@ const TransactionList = ({
                     </div>
                 )}
 
+                {/* Transaction Items List */}
                 <div className="space-y-3 max-h-[50vh] overflow-y-auto">
                     {loading ? (
                         <div className="flex items-center justify-center py-8"><Loader2 className="w-6 h-6 animate-spin electric-accent" /></div>

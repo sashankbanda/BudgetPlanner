@@ -55,7 +55,7 @@ const BudgetDashboard = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white p-2 sm:p-4">
+        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white p-4">
             <div className="max-w-7xl mx-auto">
                 
                 <DashboardHeader {...budgetData} />

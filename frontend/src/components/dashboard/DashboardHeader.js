@@ -21,7 +21,7 @@ const DashboardHeader = ({
                 <h1 className="text-3xl sm:text-4xl font-bold electric-accent mb-2">Budget Planner</h1>
                 <p className="text-gray-300 text-sm sm:text-base">Track your finances with futuristic precision</p>
             </div>
-            <div className="flex items-center justify-center sm:justify-end gap-2 sm:gap-4 w-full sm:w-auto">
+            <div className="flex items-center justify-center sm:justify-end gap-2 sm:gap-4 w-full sm:w-auto flex-wrap">
                 <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
                     <SelectTrigger className="glass-input w-[150px] sm:w-[180px]">
                         <SelectValue placeholder="Select Account" />
