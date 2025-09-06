@@ -223,13 +223,26 @@ const DashboardTabs = ({
                 </Card>
             </TabsContent>
 
-            <TabsContent value="transactions">
-                <TransactionList {...{
-                    transactions, loading, handleEditClick, handleDeleteClick,
-                    filters, handleFilterChange, uniqueCategories,
-                    isFilterActive, filteredTotals,
-                    searchInput, handleSearchSubmit
-                }} />
+            <TabsContent value="transactions" className="h-full">
+                <Card className="glass-card h-full">
+                    <CardHeader>
+                        <CardTitle className="electric-accent">Transactions History</CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-full">
+                        {transactions && transactions.length > 0 ? (
+                            <TransactionList {...{
+                                transactions, loading, handleEditClick, handleDeleteClick,
+                                filters, handleFilterChange, uniqueCategories,
+                                isFilterActive, filteredTotals,
+                                searchInput, handleSearchSubmit
+                            }} />
+                        ) : (
+                            <div className="h-full flex items-center justify-center text-gray-400">
+                                <p>No transactions found.</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
             </TabsContent>
         </Tabs>
     );
