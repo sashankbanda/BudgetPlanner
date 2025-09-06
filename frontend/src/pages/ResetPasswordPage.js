@@ -79,7 +79,8 @@ const ResetPasswordPage = () => {
                     ) : (
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <Label htmlFor="new-password">New Password</Label>
+                                {/* ✨ FIX: Added className to make the label visible ✨ */}
+                                <Label htmlFor="new-password" className="text-gray-300">New Password</Label>
                                 <div className="relative">
                                     <Input
                                         id="new-password"
@@ -96,7 +97,8 @@ const ResetPasswordPage = () => {
                                 <PasswordStrengthMeter password={newPassword} />
                             </div>
                             <div>
-                                <Label htmlFor="confirm-password">Confirm New Password</Label>
+                                {/* ✨ FIX: Added className to make the label visible ✨ */}
+                                <Label htmlFor="confirm-password" className="text-gray-300">Confirm New Password</Label>
                                 <div className="relative">
                                     <Input
                                         id="confirm-password"
