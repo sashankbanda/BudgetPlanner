@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useDeferredValue } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from './use-toast';
 import api from '../services/api';
@@ -32,8 +32,10 @@ export const useBudgetData = () => {
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [deletingTransactionId, setDeletingTransactionId] = useState(null);
 
+    // State for the live search input value
+    const [searchInput, setSearchInput] = useState(''); 
+    // State for the filters that will be sent to the API
     const [filters, setFilters] = useState({ search: '', type: '', category: '', sort: 'date_desc' });
-    const deferredFilters = useDeferredValue(filters);
     
     const [formData, setFormData] = useState({
         type: 'expense', category: '', amount: '', description: '',
@@ -43,6 +45,20 @@ export const useBudgetData = () => {
 
     const { toast } = useToast();
     const navigate = useNavigate();
+
+    // Debounce effect for the search input
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            // Update the main filters only when the user stops typing
+             setFilters(prev => ({ ...prev, search: searchInput }));
+        }, 500); // 500ms delay
+
+        // Cleanup the timeout if the user types again before 500ms
+        return () => {
+            clearTimeout(timer);
+        };
+    }, [searchInput]); // This effect runs whenever the live search input changes
+
 
     const loadData = useCallback(async () => {
         try {
@@ -60,7 +76,8 @@ export const useBudgetData = () => {
                 incomeStats, expenseStats, trendStats, peopleData, peopleStatsData
             ] = await Promise.all([
                 api.accounts.getAll(),
-                api.transactions.getAll(deferredFilters, selectedAccountId),
+                // The API call now uses the 'filters' state, which is updated by the debounce
+                api.transactions.getAll(filters, selectedAccountId),
                 api.stats.getDashboardStats(selectedAccountId),
                 api.stats.getMonthlyStats(selectedAccountId),
                 api.stats.getCategoryStats('income', selectedAccountId),
@@ -87,31 +104,28 @@ export const useBudgetData = () => {
         } finally {
             setLoading(false);
         }
-    }, [deferredFilters, selectedAccountId, trendPeriod, trendDateRange.from, trendDateRange.to, toast, formData.account_id]);
+    }, [filters, selectedAccountId, trendPeriod, trendDateRange.from, trendDateRange.to, toast, formData.account_id]);
 
     useEffect(() => {
         setLoading(true);
         loadData();
     }, [loadData]);
     
-    const handleCreateAccount = async (name) => { // ✨ FIX: Accept name as an argument
-        const accountName = name || newAccountName; // Use argument first, then state
+    const handleCreateAccount = async (name) => { 
+        const accountName = name || newAccountName; 
         if (!accountName.trim()) {
             return toast({ title: "Error", description: "Account name cannot be empty.", variant: "destructive" });
         }
         try {
             const newAccount = await api.accounts.create({ name: accountName });
             toast({ title: "Success", description: "Account created." });
-            setNewAccountName(""); // Clear the input for the dialog
-            // Manually update accounts list to trigger re-render immediately
+            setNewAccountName(""); 
             setAccounts(prev => [...prev, newAccount]);
             setSelectedAccountId(newAccount.id);
         } catch (error) {
             toast({ title: "Error", description: "Failed to create account.", variant: "destructive" });
         }
     };
-
-    // ... The rest of the useBudgetData hook remains the same ...
 
     useEffect(() => {
         if (!personCategories.includes(formData.category)) {
@@ -168,10 +182,10 @@ export const useBudgetData = () => {
     };
 
     const handleEditClick = (transaction) => {
-        setEditingTransaction(transaction);
         const allCategories = transaction.type === 'income' ? incomeCategories : expenseCategories;
         const categoryExists = allCategories.includes(transaction.category);
 
+        setEditingTransaction(transaction);
         setFormData({
             ...transaction,
             category: categoryExists ? transaction.category : 'Custom',
@@ -221,7 +235,7 @@ export const useBudgetData = () => {
         try {
             await api.people.settleUp(person.name, account_id);
             toast({ title: "Success!", description: `Balance with ${person.name} has been settled.` });
-            await loadData(); // Refresh all data
+            await loadData(); 
         } catch (error) {
             console.error("Failed to settle up:", error);
             toast({ title: "Error", description: `Could not settle up with ${person.name}. ${error.message}`, variant: "destructive" });
@@ -234,9 +248,23 @@ export const useBudgetData = () => {
         toast({ title: "Logged Out", description: "You have been successfully logged out." });
     };
 
+    // Function to handle changes to dropdown filters and search input
     const handleFilterChange = (key, value) => {
-        setFilters(prev => ({ ...prev, [key]: value }));
+        if (key === 'search') {
+            // For search, just update the live input state. The useEffect will handle the rest.
+            setSearchInput(value);
+        } else {
+            // For dropdowns, update the main filters directly for an instant change.
+            setFilters(prev => ({ ...prev, [key]: value }));
+        }
     };
+
+    // Function to trigger an immediate search, bypassing the debounce (for Enter key)
+    const handleSearchSubmit = () => {
+        if (searchInput !== filters.search) {
+            setFilters(prev => ({ ...prev, search: searchInput }));
+        }
+    };
 
     const uniqueCategories = useMemo(() => {
         const allCategories = new Set(transactions.map(t => t.category));
@@ -261,6 +289,7 @@ export const useBudgetData = () => {
         selectedAccountId, isManageAccountsOpen, newAccountName, isFormDialogOpen,
         editingTransaction, isDeleteDialogOpen, filters, formData,
         trendPeriod, trendDateRange,
+        searchInput, // Export the live search input value
         
         setSelectedAccountId, setIsManageAccountsOpen, setNewAccountName, setIsFormDialogOpen,
         setIsDeleteDialogOpen, setFormData,
@@ -269,6 +298,7 @@ export const useBudgetData = () => {
         handleSettleUp,handleLogout, handleCreateAccount, handleDeleteAccount, resetForm,
         handleFormSubmit, handleEditClick, handleDeleteClick, handleDeleteConfirm,
         handleFilterChange,
+        handleSearchSubmit, // Export the instant search function
 
         uniqueCategories, filteredTotals, isFilterActive,
     };
