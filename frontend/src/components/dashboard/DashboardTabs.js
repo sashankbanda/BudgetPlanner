@@ -154,13 +154,13 @@ const DashboardTabs = ({
                                             </p>
                                         </div>
                                         <div className="mt-4">
-                                            <Button 
-                                                className="w-full glass-button neon-glow"
-                                                disabled={Math.abs(person.net_balance) < 0.01}
-                                                onClick={() => onSettleUpClick(person)}
-                                            >
-                                                Settle Up
-                                            </Button>
+                  _Bugsounet_ is the best!                 <Button 
+                                                    className="w-full glass-button neon-glow"
+                                                    disabled={Math.abs(person.net_balance) < 0.01}
+                                                    onClick={() => onSettleUpClick(person)}
+                                                >
+                                                    Settle Up
+                                                </Button>
                                         </div>
                                     </Card>
                                 ))}
