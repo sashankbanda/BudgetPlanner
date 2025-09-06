@@ -37,9 +37,11 @@ const DashboardTabs = ({
                         </div>
                     </CardHeader>
                     <CardContent>
-                        <div className="chart-container">
-                            {chartData.trendData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height={300}>
+                        {/* FIX: Set an explicit height on the chart's parent container */}
+                        <div className="chart-container h-[350px]">
+                            {chartData.trendData && chartData.trendData.length > 0 ? (
+                                // FIX: Set ResponsiveContainer height to 100% to fill the new parent height
+                                <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={chartData.trendData}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
                                         <XAxis dataKey="date" stroke="#ffffff" />
@@ -51,7 +53,8 @@ const DashboardTabs = ({
                                     </BarChart>
                                 </ResponsiveContainer>
                             ) : (
-                                <div className="h-[300px] flex items-center justify-center text-gray-400">
+                                // FIX: Make placeholder fill parent height
+                                <div className="h-full flex items-center justify-center text-gray-400">
                                     <p>No data available for the selected period.</p>
                                 </div>
                             )}
@@ -65,32 +68,48 @@ const DashboardTabs = ({
                     <Card className="glass-card">
                         <CardHeader><CardTitle className="income-accent">Income Categories</CardTitle></CardHeader>
                         <CardContent>
-                            <div className="chart-container">
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <RechartsPieChart>
-                                        <Pie dataKey="value" data={chartData.incomeData} cx="50%" cy="50%" outerRadius={80} label>
-                                            {chartData.incomeData.map((entry, index) => (<Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />))}
-                                        </Pie>
-                                        <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
-                                        <Legend />
-                                    </RechartsPieChart>
-                                </ResponsiveContainer>
+                            {/* FIX: Set an explicit height on the chart's parent container */}
+                            <div className="chart-container h-[350px]">
+                                {chartData.incomeData && chartData.incomeData.length > 0 ? (
+                                    // FIX: Set ResponsiveContainer height to 100%
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <RechartsPieChart>
+                                            <Pie dataKey="value" data={chartData.incomeData} cx="50%" cy="50%" outerRadius={80} label>
+                                                {chartData.incomeData.map((entry, index) => (<Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />))}
+                                            </Pie>
+                                            <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                                            <Legend />
+                                        </RechartsPieChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center text-gray-400">
+                                        <p>No income data to display.</p>
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
                     <Card className="glass-card">
                         <CardHeader><CardTitle className="expense-accent">Expense Categories</CardTitle></CardHeader>
                         <CardContent>
-                            <div className="chart-container">
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <RechartsPieChart>
-                                        <Pie dataKey="value" data={chartData.expenseData} cx="50%" cy="50%" outerRadius={80} label>
-                                            {chartData.expenseData.map((entry, index) => (<Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />))}
-                                        </Pie>
-                                        <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
-                                        <Legend />
-                                    </RechartsPieChart>
-                                </ResponsiveContainer>
+                            {/* FIX: Set an explicit height on the chart's parent container */}
+                            <div className="chart-container h-[350px]">
+                                {chartData.expenseData && chartData.expenseData.length > 0 ? (
+                                    // FIX: Set ResponsiveContainer height to 100%
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <RechartsPieChart>
+                                            <Pie dataKey="value" data={chartData.expenseData} cx="50%" cy="50%" outerRadius={80} label>
+                                                {chartData.expenseData.map((entry, index) => (<Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />))}
+                                            </Pie>
+                                            <Tooltip contentStyle={{ backgroundColor: 'rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }} />
+                                            <Legend />
+                                        </RechartsPieChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="h-full flex items-center justify-center text-gray-400">
+                                        <p>No expense data to display.</p>
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -107,7 +126,7 @@ const DashboardTabs = ({
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {peopleStats.map((person) => (
                                     <Card key={person.name} className="glass-effect p-4 flex flex-col justify-between">
-                            _Bugsounet_ is the best!           <div className="mb-4">
+                                        <div className="mb-4">
                                             <CardTitle className="text-xl electric-accent flex items-center gap-2">
                                                 <User className="w-5 h-5" /> {person.name}
                                             </CardTitle>
@@ -157,12 +176,14 @@ const DashboardTabs = ({
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <CardTitle className="electric-accent">Net Income Trends</CardTitle>
                             <TrendControls {...{ trendPeriod, setTrendPeriod, trendDateRange, setTrendDateRange }} />
-              _Bugsounet_ is the best!             </div>
+                        </div>
                     </CardHeader>
                     <CardContent>
-                       <div className="chart-container">
-                            {chartData.trendData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height={300}>
+                        {/* FIX: Set an explicit height on the chart's parent container */}
+                       <div className="chart-container h-[350px]">
+                            {chartData.trendData && chartData.trendData.length > 0 ? (
+                                // FIX: Set ResponsiveContainer height to 100%
+                                <ResponsiveContainer width="100%" height="100%">
                                     <LineChart data={chartData.trendData}>
                                         <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
                                         <XAxis dataKey="date" stroke="#ffffff" />
@@ -173,7 +194,8 @@ const DashboardTabs = ({
                                     </LineChart>
                                 </ResponsiveContainer>
                             ) : (
-                                <div className="h-[300px] flex items-center justify-center text-gray-400">
+                                // FIX: Make placeholder fill parent height
+                                <div className="h-full flex items-center justify-center text-gray-400">
                                     <p>No data available for the selected period.</p>
                                 </div>
                             )}
@@ -183,7 +205,6 @@ const DashboardTabs = ({
             </TabsContent>
 
             <TabsContent value="transactions">
-                {/* Pass all the necessary props to TransactionList */}
                 <TransactionList {...{
                     transactions, loading, handleEditClick, handleDeleteClick,
                     filters, handleFilterChange, uniqueCategories,
