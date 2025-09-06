@@ -11,10 +11,12 @@ from auth import (
 from motor.motor_asyncio import AsyncIOMotorDatabase
 import logging
 import uuid
-from datetime import datetime
+import secrets
+from datetime import datetime, timedelta
 import os
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
+from jose import jwt, JWTError # Import JWTError for refresh token validation
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -34,13 +36,17 @@ class RefreshTokenRequest(BaseModel):
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
-# ✨ CHANGE HERE: The request will now contain the id_token directly
+# ✨ NEW: Model for reset password payload
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
 class GoogleLoginRequest(BaseModel):
     id_token: str
 
 # --- Endpoints ---
 
-@router.post("/signup", response_model=Token, status_code=status.HTTP_201_CREATED)
+@router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def create_user(user: UserCreate, db: AsyncIOMotorDatabase = Depends(get_database)):
     if len(user.password) < 8:
         raise HTTPException(
@@ -69,25 +75,29 @@ async def create_user(user: UserCreate, db: AsyncIOMotorDatabase = Depends(get_d
     
     await db.users.insert_one(user_document)
     
-    access_token = create_access_token(data={"sub": user.email})
-    refresh_token = create_refresh_token(data={"sub": user.email})
-
+    # Simulate sending verification email
     logging.warning(f"--- EMAIL VERIFICATION SIMULATION ---")
     logging.warning(f"Verification link for {user.email}: /verify-email?token={verification_token}")
     logging.warning(f"------------------------------------")
     
-    return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
+    return {"message": "Signup successful. Please check your email to verify your account."}
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncIOMotorDatabase = Depends(get_database)):
     user = await db.users.find_one({"_id": form_data.username})
-    if not user or not verify_password(form_data.password, user["hashed_password"]):
+    if not user or not user.get("hashed_password") or not verify_password(form_data.password, user["hashed_password"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    if not user.get("verified", False):
+         raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Email not verified. Please check your inbox for a verification link.",
+        )
+
     access_token = create_access_token(data={"sub": user["_id"]})
     refresh_token = create_refresh_token(data={"sub": user["_id"]})
     return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
@@ -95,7 +105,6 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 @router.post("/google-login", response_model=Token)
 async def google_login(request: GoogleLoginRequest, db: AsyncIOMotorDatabase = Depends(get_database)):
     try:
-        # ✨ CHANGE HERE: We now verify the id_token directly
         id_info = id_token.verify_oauth2_token(
             request.id_token, 
             google_requests.Request(),
@@ -110,7 +119,7 @@ async def google_login(request: GoogleLoginRequest, db: AsyncIOMotorDatabase = D
         new_user_doc = {
             "_id": email,
             "email": email,
-            "hashed_password": None,
+            "hashed_password": None, # No password for Google users
             "verified": True,
             "created_at": datetime.utcnow()
         }
@@ -120,37 +129,96 @@ async def google_login(request: GoogleLoginRequest, db: AsyncIOMotorDatabase = D
     refresh_token = create_refresh_token(data={"sub": email})
     return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
 
-# ... (the rest of your file remains the same)
-@router.post("/token/refresh", response_model=Token)
-async def refresh_access_token(request: RefreshTokenRequest):
-    try:
-        # This needs a more secure implementation in a real app
-        user_id = jwt.decode(request.refresh_token, os.environ.get("SECRET_KEY"), algorithms=["HS256"])["sub"]
-        new_access_token = create_access_token(data={"sub": user_id})
-        new_refresh_token = create_refresh_token(data={"sub": user_id})
-        return {"access_token": new_access_token, "token_type": "bearer", "refresh_token": new_refresh_token}
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid refresh token")
 
+@router.post("/token/refresh", response_model=Token)
+async def refresh_access_token(request: RefreshTokenRequest, db: AsyncIOMotorDatabase = Depends(get_database)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid refresh token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(request.refresh_token, os.environ.get("SECRET_KEY"), algorithms=["HS256"])
+        if payload.get("scope") != "refresh_token":
+            raise credentials_exception
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+            
+        user = await db.users.find_one({"_id": user_id})
+        if user is None:
+            raise credentials_exception
+
+    except JWTError:
+        raise credentials_exception
+
+    new_access_token = create_access_token(data={"sub": user_id})
+    new_refresh_token = create_refresh_token(data={"sub": user_id})
+    return {"access_token": new_access_token, "token_type": "bearer", "refresh_token": new_refresh_token}
+
+# ✨ FIX: Full implementation for forgot password ✨
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
 async def forgot_password(request: ForgotPasswordRequest, db: AsyncIOMotorDatabase = Depends(get_database)):
-    # ... (code is correct, no changes needed here)
     user = await db.users.find_one({"_id": request.email})
-    if not user:
-        return {"message": "If an account with this email exists, a password reset link has been sent."}
-    if not user.get("verified", False):
-        return {"message": "This account is not verified. A new verification link has been sent to your email."}
+    if user:
+        # Generate a secure token
+        token = secrets.token_urlsafe(32)
+        # Set an expiry time (e.g., 1 hour from now)
+        expiry_date = datetime.utcnow() + timedelta(hours=1)
+        
+        # Store the token and expiry in the user's document
+        await db.users.update_one(
+            {"_id": request.email},
+            {"$set": {"reset_password_token": token, "reset_token_expires": expiry_date}}
+        )
+
+        # In a real app, you would email this link
+        reset_url = f"https://allocash.netlify.app/reset-password?token={token}"
+        logging.warning("--- PASSWORD RESET SIMULATION ---")
+        logging.warning(f"Password reset link for {request.email}: {reset_url}")
+        logging.warning("---------------------------------")
+
+    # Always return the same message to prevent email enumeration attacks
     return {"message": "If an account with this email exists, a password reset link has been sent."}
+
+# ✨ NEW: Endpoint to handle the actual password reset ✨
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+async def reset_password(request: ResetPasswordRequest, db: AsyncIOMotorDatabase = Depends(get_database)):
+    if len(request.new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters long",
+        )
+        
+    # Find the user by the token and check if the token is not expired
+    user = await db.users.find_one({
+        "reset_password_token": request.token,
+        "reset_token_expires": {"$gt": datetime.utcnow()}
+    })
+
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid or expired password reset token.")
+    
+    new_hashed_password = get_password_hash(request.new_password)
+    
+    # Update the password and remove the reset token fields
+    await db.users.update_one(
+        {"_id": user["_id"]},
+        {
+            "$set": {"hashed_password": new_hashed_password},
+            "$unset": {"reset_password_token": "", "reset_token_expires": ""}
+        }
+    )
+    
+    return {"message": "Password has been reset successfully. You can now log in."}
 
 
 @router.get("/verify-email", status_code=status.HTTP_200_OK)
 async def verify_email(token: str, db: AsyncIOMotorDatabase = Depends(get_database)):
-    # ... (code is correct, no changes needed here)
     user = await db.users.find_one_and_update(
-        {"verification_token": token, "verified": False},
+        {"verification_token": token},
         {"$set": {"verified": True}, "$unset": {"verification_token": ""}}
     )
     if not user:
         raise HTTPException(status_code=400, detail="Invalid or expired verification token.")
     return {"message": "Email verified successfully. You can now log in."}
-
