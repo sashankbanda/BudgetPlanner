@@ -22,7 +22,7 @@ const Button = ({ children, className = '', ...props }) => (
 const TabsContext = React.createContext({ activeTab: '', onTabChange: () => {} });
 
 const Tabs = ({ children, value, onValueChange, className = '' }) => (
-    <TabsContext.Provider value={{ activeTab: value, onTabChange }}>
+    <TabsContext.Provider value={{ activeTab: value, onTabChange: onValueChange }}>
         <div className={className}>{children}</div>
     </TabsContext.Provider>
 );
