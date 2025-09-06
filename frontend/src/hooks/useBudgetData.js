@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useDeferredValue } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from './use-toast';
 import api from '../services/api';
@@ -33,7 +33,7 @@ export const useBudgetData = () => {
     const [deletingTransactionId, setDeletingTransactionId] = useState(null);
 
     const [filters, setFilters] = useState({ search: '', type: '', category: '', sort: 'date_desc' });
-    const [searchInput, setSearchInput] = useState('');
+    const deferredFilters = useDeferredValue(filters);
     
     const [formData, setFormData] = useState({
         type: 'expense', category: '', amount: '', description: '',
@@ -60,7 +60,7 @@ export const useBudgetData = () => {
                 incomeStats, expenseStats, trendStats, peopleData, peopleStatsData
             ] = await Promise.all([
                 api.accounts.getAll(),
-                api.transactions.getAll(filters, selectedAccountId),
+                api.transactions.getAll(deferredFilters, selectedAccountId),
                 api.stats.getDashboardStats(selectedAccountId),
                 api.stats.getMonthlyStats(selectedAccountId),
                 api.stats.getCategoryStats('income', selectedAccountId),
@@ -87,7 +87,7 @@ export const useBudgetData = () => {
         } finally {
             setLoading(false);
         }
-    }, [filters, selectedAccountId, trendPeriod, trendDateRange.from, trendDateRange.to, toast, formData.account_id]);
+    }, [deferredFilters, selectedAccountId, trendPeriod, trendDateRange.from, trendDateRange.to, toast, formData.account_id]);
 
     useEffect(() => {
         setLoading(true);
@@ -111,18 +111,7 @@ export const useBudgetData = () => {
         }
     };
 
-    const handleFilterChange = (key, value) => {
-        if (key === 'search') {
-            setSearchInput(value);
-        } else {
-            // For dropdowns, trigger search immediately with the current search term
-            setFilters(prev => ({ ...prev, search: searchInput, [key]: value }));
-        }
-    };
-
-    const triggerSearch = () => {
-        setFilters(prev => ({ ...prev, search: searchInput }));
-    };
+    // ... The rest of the useBudgetData hook remains the same ...
 
     useEffect(() => {
         if (!personCategories.includes(formData.category)) {
@@ -245,6 +234,10 @@ export const useBudgetData = () => {
         toast({ title: "Logged Out", description: "You have been successfully logged out." });
     };
 
+    const handleFilterChange = (key, value) => {
+        setFilters(prev => ({ ...prev, [key]: value }));
+    };
+
     const uniqueCategories = useMemo(() => {
         const allCategories = new Set(transactions.map(t => t.category));
         return Array.from(allCategories).sort();
@@ -268,7 +261,6 @@ export const useBudgetData = () => {
         selectedAccountId, isManageAccountsOpen, newAccountName, isFormDialogOpen,
         editingTransaction, isDeleteDialogOpen, filters, formData,
         trendPeriod, trendDateRange,
-        searchInput,
         
         setSelectedAccountId, setIsManageAccountsOpen, setNewAccountName, setIsFormDialogOpen,
         setIsDeleteDialogOpen, setFormData,
@@ -277,7 +269,6 @@ export const useBudgetData = () => {
         handleSettleUp,handleLogout, handleCreateAccount, handleDeleteAccount, resetForm,
         handleFormSubmit, handleEditClick, handleDeleteClick, handleDeleteConfirm,
         handleFilterChange,
-        triggerSearch,
 
         uniqueCategories, filteredTotals, isFilterActive,
     };
