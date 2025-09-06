@@ -8,42 +8,44 @@ from passlib.context import CryptContext
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
-# Load environment variables for JWT
+# Load environment variables
 load_dotenv()
 SECRET_KEY = os.environ.get("SECRET_KEY", "a_very_secret_key_for_dev")
 ALGORITHM = "HS256"
+
+# Token Lifespans
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+REFRESH_TOKEN_EXPIRE_DAYS = 30
 
 # Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# OAuth2 scheme - tokenUrl points to the login endpoint
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/users/token")
 
 class TokenData(BaseModel):
     username: Optional[str] = None
 
 def verify_password(plain_password, hashed_password):
-    """Verifies a plain password against a hashed one."""
     return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password):
-    """Hashes a plain password."""
     return pwd_context.hash(password)
 
 def create_access_token(data: dict):
-    """Creates a new JWT access token."""
+    """Creates a short-lived access token."""
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    to_encode.update({"exp": expire, "scope": "access_token"})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def create_refresh_token(data: dict):
+    """Creates a long-lived refresh token."""
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    to_encode.update({"exp": expire, "scope": "refresh_token"})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 async def get_current_user_id(token: str = Depends(oauth2_scheme)) -> str:
-    """
-    Dependency to get the current user's ID from a token.
-    This is the core of your endpoint protection.
-    """
+    """Dependency to get the current user's ID from an access token."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -51,7 +53,8 @@ async def get_current_user_id(token: str = Depends(oauth2_scheme)) -> str:
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        # The 'sub' (subject) of our token is the user's ID (their email)
+        if payload.get("scope") != "access_token":
+            raise credentials_exception
         user_id: str = payload.get("sub")
         if user_id is None:
             raise credentials_exception
