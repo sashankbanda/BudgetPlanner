@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
 from database import get_database
@@ -16,11 +16,15 @@ from datetime import datetime, timedelta
 import os
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
-from jose import jwt, JWTError # Import JWTError for refresh token validation
+from jose import jwt, JWTError
+
+# ✨ NEW IMPORTS FOR EMAIL
+from fastapi_mail import FastMail, MessageSchema, MessageType
+from email_service import conf # Import the configuration we created
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-# --- Models ---
+# --- Models (no changes needed here) ---
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
@@ -36,7 +40,6 @@ class RefreshTokenRequest(BaseModel):
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
-# ✨ NEW: Model for reset password payload
 class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
@@ -44,7 +47,10 @@ class ResetPasswordRequest(BaseModel):
 class GoogleLoginRequest(BaseModel):
     id_token: str
 
+
 # --- Endpoints ---
+
+# ... (signup, login, google-login, token/refresh endpoints remain the same) ...
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def create_user(user: UserCreate, db: AsyncIOMotorDatabase = Depends(get_database)):
@@ -75,7 +81,6 @@ async def create_user(user: UserCreate, db: AsyncIOMotorDatabase = Depends(get_d
     
     await db.users.insert_one(user_document)
     
-    # Simulate sending verification email
     logging.warning(f"--- EMAIL VERIFICATION SIMULATION ---")
     logging.warning(f"Verification link for {user.email}: /verify-email?token={verification_token}")
     logging.warning(f"------------------------------------")
@@ -119,7 +124,7 @@ async def google_login(request: GoogleLoginRequest, db: AsyncIOMotorDatabase = D
         new_user_doc = {
             "_id": email,
             "email": email,
-            "hashed_password": None, # No password for Google users
+            "hashed_password": None,
             "verified": True,
             "created_at": datetime.utcnow()
         }
@@ -128,7 +133,6 @@ async def google_login(request: GoogleLoginRequest, db: AsyncIOMotorDatabase = D
     access_token = create_access_token(data={"sub": email})
     refresh_token = create_refresh_token(data={"sub": email})
     return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
-
 
 @router.post("/token/refresh", response_model=Token)
 async def refresh_access_token(request: RefreshTokenRequest, db: AsyncIOMotorDatabase = Depends(get_database)):
@@ -156,32 +160,42 @@ async def refresh_access_token(request: RefreshTokenRequest, db: AsyncIOMotorDat
     new_refresh_token = create_refresh_token(data={"sub": user_id})
     return {"access_token": new_access_token, "token_type": "bearer", "refresh_token": new_refresh_token}
 
-# ✨ FIX: Full implementation for forgot password ✨
+
+# ✨ MODIFIED: This endpoint now sends a real email.
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
-async def forgot_password(request: ForgotPasswordRequest, db: AsyncIOMotorDatabase = Depends(get_database)):
+async def forgot_password(
+    request: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks, # To send email in the background
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
     user = await db.users.find_one({"_id": request.email})
     if user:
-        # Generate a secure token
         token = secrets.token_urlsafe(32)
-        # Set an expiry time (e.g., 1 hour from now)
         expiry_date = datetime.utcnow() + timedelta(hours=1)
         
-        # Store the token and expiry in the user's document
         await db.users.update_one(
             {"_id": request.email},
             {"$set": {"reset_password_token": token, "reset_token_expires": expiry_date}}
         )
 
-        # In a real app, you would email this link
         reset_url = f"https://allocash.netlify.app/reset-password?token={token}"
-        logging.warning("--- PASSWORD RESET SIMULATION ---")
-        logging.warning(f"Password reset link for {request.email}: {reset_url}")
-        logging.warning("---------------------------------")
+        
+        # Define the email message
+        message = MessageSchema(
+            subject="Your Password Reset Link for Budget Planner",
+            recipients=[request.email],
+            template_body={"reset_url": reset_url},
+            subtype=MessageType.html
+        )
+        
+        # Send the email
+        fm = FastMail(conf)
+        background_tasks.add_task(fm.send_message, message, template_name="password_reset.html")
 
-    # Always return the same message to prevent email enumeration attacks
     return {"message": "If an account with this email exists, a password reset link has been sent."}
 
-# ✨ NEW: Endpoint to handle the actual password reset ✨
+
+# ✨ NO CHANGES BELOW THIS LINE, BUT INCLUDED FOR COMPLETENESS ✨
 @router.post("/reset-password", status_code=status.HTTP_200_OK)
 async def reset_password(request: ResetPasswordRequest, db: AsyncIOMotorDatabase = Depends(get_database)):
     if len(request.new_password) < 8:
@@ -190,7 +204,6 @@ async def reset_password(request: ResetPasswordRequest, db: AsyncIOMotorDatabase
             detail="Password must be at least 8 characters long",
         )
         
-    # Find the user by the token and check if the token is not expired
     user = await db.users.find_one({
         "reset_password_token": request.token,
         "reset_token_expires": {"$gt": datetime.utcnow()}
@@ -201,7 +214,6 @@ async def reset_password(request: ResetPasswordRequest, db: AsyncIOMotorDatabase
     
     new_hashed_password = get_password_hash(request.new_password)
     
-    # Update the password and remove the reset token fields
     await db.users.update_one(
         {"_id": user["_id"]},
         {
