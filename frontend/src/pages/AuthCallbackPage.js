@@ -12,23 +12,27 @@ const AuthCallbackPage = () => {
 
     useEffect(() => {
         const handleAuthCallback = async () => {
-            const params = new URLSearchParams(location.search);
-            const code = params.get('code');
+            // ✨ FIX: Parse the URL fragment (#) instead of search query (?)
+            const params = new URLSearchParams(location.hash.substring(1));
+            const idToken = params.get('id_token');
 
-            if (!code) {
-                setError("Authorization code not found. Please try logging in again.");
-                toast({ title: "Authentication Error", description: "Google did not provide an authorization code.", variant: "destructive"});
+            if (!idToken) {
+                const errorDescription = params.get('error_description') || "ID token not found in Google's response. Please try again.";
+                setError(errorDescription);
+                toast({ title: "Authentication Error", description: errorDescription, variant: "destructive" });
                 navigate('/login');
                 return;
             }
 
             try {
-                await api.auth.handleGoogleCallback(code);
+                // The backend expects the ID token for verification
+                await api.auth.handleGoogleCallback(idToken);
                 toast({ title: "Success!", description: "Logged in with Google successfully." });
                 navigate('/');
             } catch (err) {
-                setError(err.message || "An error occurred during Google sign-in.");
-                toast({ title: "Authentication Failed", description: err.message, variant: "destructive"});
+                const errorMessage = err.message || "An error occurred during Google sign-in.";
+                setError(errorMessage);
+                toast({ title: "Authentication Failed", description: errorMessage, variant: "destructive" });
                 navigate('/login');
             }
         };
@@ -46,4 +50,3 @@ const AuthCallbackPage = () => {
 };
 
 export default AuthCallbackPage;
-

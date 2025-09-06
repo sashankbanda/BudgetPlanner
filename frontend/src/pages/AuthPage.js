@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger, DialogClose } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
@@ -23,6 +24,61 @@ const GoogleIcon = () => (
     </svg>
 );
 
+// ✨ NEW: Forgot Password Dialog Component ✨
+const ForgotPasswordDialog = () => {
+    const { toast } = useToast();
+    const [email, setEmail] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const response = await api.auth.forgotPassword(email);
+            toast({ title: "Check your email", description: response.message });
+            setIsOpen(false);
+            setEmail('');
+        } catch (error) {
+            toast({ title: "Error", description: error.message || "Failed to send reset link.", variant: "destructive" });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <button className="text-xs electric-accent hover:underline">Forgot password?</button>
+            </DialogTrigger>
+            <DialogContent className="glass-card text-white border-0">
+                <DialogHeader>
+                    <DialogTitle className="electric-accent">Reset Your Password</DialogTitle>
+                    <DialogDescription className="text-gray-400">
+                        Enter your account's email address and we will send you a link to reset your password.
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <Label htmlFor="reset-email" className="text-gray-300">Email</Label>
+                        <Input id="reset-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="glass-input" placeholder="you@example.com" />
+                    </div>
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="secondary" className="glass-button">Cancel</Button>
+                        </DialogClose>
+                        <Button type="submit" className="glass-button neon-glow" disabled={loading}>
+                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Send Reset Link
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
+
 const AuthPage = () => {
     const [activeTab, setActiveTab] = useState('login');
     const [loading, setLoading] = useState(false);
@@ -32,7 +88,7 @@ const AuthPage = () => {
     // Form State
     const [loginEmail, setLoginEmail] = useState('');
     const [loginPassword, setLoginPassword] = useState('');
-    const [rememberMe, setRememberMe] = useState(true); // Default to true for convenience
+    const [rememberMe, setRememberMe] = useState(true);
     const [signupEmail, setSignupEmail] = useState('');
     const [signupPassword, setSignupPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -81,10 +137,9 @@ const AuthPage = () => {
         }
         setLoading(true);
         try {
-            await api.auth.signup(signupEmail, signupPassword);
-            // After successful signup, they are auto-logged in.
-            toast({ title: "Welcome!", description: "Account created successfully." });
-            navigate('/'); // Redirect to dashboard immediately
+            const response = await api.auth.signup(signupEmail, signupPassword);
+            toast({ title: "Welcome!", description: response.message || "Account created successfully. Please check your email to verify your account." });
+            setActiveTab('login'); // Switch to login tab after signup
         } catch (error) {
             toast({ title: "Signup Failed", description: error.message, variant: "destructive" });
         } finally {
@@ -92,22 +147,23 @@ const AuthPage = () => {
         }
     };
 
+    // ✨ FIX: Updated Google login handler to use the implicit flow for ID token
     const handleGoogleLogin = () => {
         const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
-        // This MUST match the URI you set in your Google Cloud Console
-        const redirectUri = "https://allocash.netlify.app/auth/callback";
-        
+        const redirectUri = `${window.location.origin}/auth/callback`;
+
         const rootUrl = "https://accounts.google.com/o/oauth2/v2/auth";
+        
+        // Use a random string for nonce for security
+        const nonce = [...Array(16)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+
         const options = {
             redirect_uri: redirectUri,
             client_id: googleClientId,
-            access_type: "offline",
-            response_type: "code",
+            response_type: "id_token", // Request an ID token directly
             prompt: "consent",
-            scope: [
-                "https://www.googleapis.com/auth/userinfo.profile",
-                "https://www.googleapis.com/auth/userinfo.email",
-            ].join(" "),
+            scope: "openid email profile", // Standard scopes for OpenID Connect
+            nonce: nonce, // Mitigates replay attacks
         };
         
         const qs = new URLSearchParams(options).toString();
@@ -136,7 +192,8 @@ const AuthPage = () => {
                                 <div>
                                     <div className="flex justify-between items-center">
                                         <Label htmlFor="login-password" className="text-gray-300">Password</Label>
-                                        <a href="#" className="text-xs electric-accent hover:underline">Forgot password?</a>
+                                        {/* ✨ USE THE NEW DIALOG COMPONENT HERE ✨ */}
+                                        <ForgotPasswordDialog />
                                     </div>
                                     <div className="relative">
                                         <Input id="login-password" type={showLoginPassword ? "text" : "password"} value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required className="glass-input pr-10" />
@@ -212,4 +269,3 @@ const AuthPage = () => {
 };
 
 export default AuthPage;
-

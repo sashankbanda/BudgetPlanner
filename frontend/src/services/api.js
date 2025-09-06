@@ -38,8 +38,9 @@ apiClient.interceptors.request.use(
           if (window.location.pathname !== '/login') window.location.href = '/login';
           return Promise.reject(error);
         }
-      } else {
+      } else if (refreshToken) { // Only logout if there was a refresh token that expired
         authAPI.logout();
+        if (window.location.pathname !== '/login') window.location.href = '/login';
       }
     }
     
@@ -51,26 +52,57 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Helper to handle API errors
+const handleApiError = (error) => {
+    if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        const detail = error.response.data.detail;
+        if (typeof detail === 'string') {
+            throw new Error(detail);
+        } else if (Array.isArray(detail)) {
+            // Handle FastAPI validation errors
+            const messages = detail.map(err => `${err.loc[1]}: ${err.msg}`).join(', ');
+            throw new Error(messages);
+        } else {
+            throw new Error(error.response.data.detail || 'An unknown error occurred.');
+        }
+    } else if (error.request) {
+        // The request was made but no response was received
+        throw new Error('No response from server. Please check your connection.');
+    } else {
+        // Something happened in setting up the request that triggered an Error
+        throw new Error(error.message);
+    }
+};
+
+
 export const authAPI = {
     login: async (email, password, rememberMe) => {
-        const formData = new URLSearchParams();
-        formData.append('username', email);
-        formData.append('password', password);
-        const response = await apiClient.post('/users/token', formData, {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        });
-        const { access_token, refresh_token } = response.data;
-        const storage = rememberMe ? localStorage : sessionStorage;
-        storage.setItem('accessToken', access_token);
-        storage.setItem('refreshToken', refresh_token);
-        return response.data;
+        try {
+            const formData = new URLSearchParams();
+            formData.append('username', email);
+            formData.append('password', password);
+            const response = await apiClient.post('/users/token', formData, {
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            });
+            const { access_token, refresh_token } = response.data;
+            const storage = rememberMe ? localStorage : sessionStorage;
+            storage.setItem('accessToken', access_token);
+            storage.setItem('refreshToken', refresh_token);
+            return response.data;
+        } catch (error) {
+            handleApiError(error);
+        }
     },
     signup: async (email, password) => {
-        const response = await apiClient.post('/users/signup', { email, password });
-        const { access_token, refresh_token } = response.data;
-        localStorage.setItem('accessToken', access_token);
-        localStorage.setItem('refreshToken', refresh_token);
-        return response.data;
+        try {
+            const response = await apiClient.post('/users/signup', { email, password });
+            // Don't auto-login after signup, let them verify email first.
+            return response.data;
+        } catch (error) {
+            handleApiError(error);
+        }
     },
     logout: () => {
         localStorage.removeItem('accessToken');
@@ -78,20 +110,43 @@ export const authAPI = {
         sessionStorage.removeItem('accessToken');
         sessionStorage.removeItem('refreshToken');
     },
+    handleGoogleCallback: async (idToken) => {
+        try {
+            const response = await apiClient.post('/users/google-login', { id_token: idToken });
+            const { access_token, refresh_token } = response.data;
+            if (access_token && refresh_token) {
+                // Google users are pre-verified, so we can use localStorage.
+                localStorage.setItem('accessToken', access_token);
+                localStorage.setItem('refreshToken', refresh_token);
+            }
+            return response.data;
+        } catch (error) {
+            handleApiError(error);
+        }
+    },
+    // ✨ NEW: Forgot Password Function ✨
+    forgotPassword: async (email) => {
+        try {
+            const response = await apiClient.post('/users/forgot-password', { email });
+            return response.data;
+        } catch (error) {
+            handleApiError(error);
+        }
+    },
+    // ✨ NEW: Reset Password Function ✨
+    resetPassword: async (token, newPassword) => {
+        try {
+            const response = await apiClient.post('/users/reset-password', { token, new_password: newPassword });
+            return response.data;
+        } catch (error) {
+            handleApiError(error);
+        }
+    },
     verifyEmail: (token) => apiClient.get(`/users/verify-email?token=${token}`).then(res => res.data),
     resendVerification: () => apiClient.post('/users/resend-verification').then(res => res.data),
-    
-    // ✨ CHANGE HERE: Send the id_token instead of the code
-    handleGoogleCallback: async (idToken) => {
-        const response = await apiClient.post('/users/google-login', { id_token: idToken });
-        const { access_token, refresh_token } = response.data;
-        if (access_token && refresh_token) {
-            localStorage.setItem('accessToken', access_token);
-            localStorage.setItem('refreshToken', refresh_token);
-        }
-        return response.data;
-    },
 };
+
+// The rest of your API functions remain the same...
 
 export const accountAPI = {
     getAll: () => apiClient.get('/accounts').then(res => res.data),
@@ -143,6 +198,7 @@ export const peopleAPI = {
     settleUp: (name, account_id) => apiClient.post(`/people/${name}/settle`, { account_id }).then(res => res.data),
 };
 
+
 const api = {
     auth: authAPI,
     accounts: accountAPI,
@@ -152,4 +208,3 @@ const api = {
 };
 
 export default api;
-

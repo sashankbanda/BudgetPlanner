@@ -3,7 +3,8 @@ import "./App.css";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import BudgetDashboard from './pages/BudgetDashboard';
 import AuthPage from './pages/AuthPage';
-import AuthCallbackPage from './pages/AuthCallbackPage'; // ✨ IMPORT THE NEW PAGE
+import AuthCallbackPage from './pages/AuthCallbackPage';
+import ResetPasswordPage from './pages/ResetPasswordPage'; // ✨ IMPORT THE NEW PAGE
 import { Toaster } from "./components/ui/toaster";
 
 const PrivateRoute = ({ children }) => {
@@ -18,9 +19,9 @@ function App() {
         <Routes>
           {/* Public routes */}
           <Route path="/login" element={<AuthPage />} />
-          
-          {/* ✨ ADD THIS NEW ROUTE ✨ */}
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          {/* ✨ ADD THIS NEW ROUTE FOR PASSWORD RESET ✨ */}
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           
           {/* Protected route for the main dashboard */}
           <Route 
@@ -39,4 +40,3 @@ function App() {
 }
 
 export default App;
-
