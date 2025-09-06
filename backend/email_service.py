@@ -16,5 +16,7 @@ conf = ConnectionConfig(
     MAIL_STARTTLS = True,
     MAIL_SSL_TLS = False,
     USE_CREDENTIALS = True,
-    VALIDATE_CERTS = True
+    VALIDATE_CERTS = True,
+    # ✨ FIX: Tell fastapi-mail where to find the templates directory ✨
+    TEMPLATE_FOLDER = ROOT_DIR / 'templates'
 )
