@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -13,7 +14,7 @@ import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
 import { cn } from '../lib/utils';
 import { Checkbox } from '../components/ui/checkbox';
 
-// Google Icon SVG
+// Google Icon SVG (no changes)
 const GoogleIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -24,15 +25,20 @@ const GoogleIcon = () => (
     </svg>
 );
 
-// ✨ NEW: Forgot Password Dialog Component ✨
+
+// ✨ FIX: Modified the dialog's form submission logic
 const ForgotPasswordDialog = () => {
     const { toast } = useToast();
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const handleSubmit = async () => {
+        // No event (e) needed anymore
+        if (!email) {
+            toast({ title: "Error", description: "Please enter your email address.", variant: "destructive" });
+            return;
+        }
         setLoading(true);
         try {
             const response = await api.auth.forgotPassword(email);
@@ -58,7 +64,8 @@ const ForgotPasswordDialog = () => {
                         Enter your account's email address and we will send you a link to reset your password.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                {/* ✨ FIX: Removed the <form> wrapper */}
+                <div className="space-y-4">
                     <div>
                         <Label htmlFor="reset-email" className="text-gray-300">Email</Label>
                         <Input id="reset-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="glass-input" placeholder="you@example.com" />
@@ -67,12 +74,13 @@ const ForgotPasswordDialog = () => {
                         <DialogClose asChild>
                             <Button type="button" variant="secondary" className="glass-button">Cancel</Button>
                         </DialogClose>
-                        <Button type="submit" className="glass-button neon-glow" disabled={loading}>
+                        {/* ✨ FIX: Changed button type to "button" and added onClick handler */}
+                        <Button type="button" onClick={handleSubmit} className="glass-button neon-glow" disabled={loading}>
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Send Reset Link
                         </Button>
                     </DialogFooter>
-                </form>
+                </div>
             </DialogContent>
         </Dialog>
     );
@@ -147,23 +155,21 @@ const AuthPage = () => {
         }
     };
 
-    // ✨ FIX: Updated Google login handler to use the implicit flow for ID token
     const handleGoogleLogin = () => {
         const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
         const redirectUri = `${window.location.origin}/auth/callback`;
 
         const rootUrl = "https://accounts.google.com/o/oauth2/v2/auth";
         
-        // Use a random string for nonce for security
         const nonce = [...Array(16)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
 
         const options = {
             redirect_uri: redirectUri,
             client_id: googleClientId,
-            response_type: "id_token", // Request an ID token directly
+            response_type: "id_token",
             prompt: "consent",
-            scope: "openid email profile", // Standard scopes for OpenID Connect
-            nonce: nonce, // Mitigates replay attacks
+            scope: "openid email profile",
+            nonce: nonce,
         };
         
         const qs = new URLSearchParams(options).toString();
@@ -192,7 +198,6 @@ const AuthPage = () => {
                                 <div>
                                     <div className="flex justify-between items-center">
                                         <Label htmlFor="login-password" className="text-gray-300">Password</Label>
-                                        {/* ✨ USE THE NEW DIALOG COMPONENT HERE ✨ */}
                                         <ForgotPasswordDialog />
                                     </div>
                                     <div className="relative">

@@ -56,13 +56,12 @@ apiClient.interceptors.request.use(
 const handleApiError = (error) => {
     if (error.response) {
         // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
         const detail = error.response.data.detail;
         if (typeof detail === 'string') {
             throw new Error(detail);
         } else if (Array.isArray(detail)) {
             // Handle FastAPI validation errors
-            const messages = detail.map(err => `${err.loc[1]}: ${err.msg}`).join(', ');
+            const messages = detail.map(err => `${err.loc.length > 1 ? err.loc[1] : 'Error'}: ${err.msg}`).join(', ');
             throw new Error(messages);
         } else {
             throw new Error(error.response.data.detail || 'An unknown error occurred.');
@@ -97,8 +96,8 @@ export const authAPI = {
     },
     signup: async (email, password) => {
         try {
+            // ✨ FIX: Don't auto-login on signup. Just return the backend message.
             const response = await apiClient.post('/users/signup', { email, password });
-            // Don't auto-login after signup, let them verify email first.
             return response.data;
         } catch (error) {
             handleApiError(error);
@@ -115,7 +114,6 @@ export const authAPI = {
             const response = await apiClient.post('/users/google-login', { id_token: idToken });
             const { access_token, refresh_token } = response.data;
             if (access_token && refresh_token) {
-                // Google users are pre-verified, so we can use localStorage.
                 localStorage.setItem('accessToken', access_token);
                 localStorage.setItem('refreshToken', refresh_token);
             }
@@ -124,7 +122,6 @@ export const authAPI = {
             handleApiError(error);
         }
     },
-    // ✨ NEW: Forgot Password Function ✨
     forgotPassword: async (email) => {
         try {
             const response = await apiClient.post('/users/forgot-password', { email });
@@ -133,7 +130,6 @@ export const authAPI = {
             handleApiError(error);
         }
     },
-    // ✨ NEW: Reset Password Function ✨
     resetPassword: async (token, newPassword) => {
         try {
             const response = await apiClient.post('/users/reset-password', { token, new_password: newPassword });
@@ -146,7 +142,6 @@ export const authAPI = {
     resendVerification: () => apiClient.post('/users/resend-verification').then(res => res.data),
 };
 
-// The rest of your API functions remain the same...
 
 export const accountAPI = {
     getAll: () => apiClient.get('/accounts').then(res => res.data),
