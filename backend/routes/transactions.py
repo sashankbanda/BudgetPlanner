@@ -66,13 +66,12 @@ async def get_transactions(
     search: Optional[str] = None,
     type: Optional[Literal["income", "expense", ""]] = Query(default=None),
     category: Optional[str] = None,
-    sort: Optional[Literal["date_desc", "amount_desc", "category_asc"]] = Query(default="date_desc")
+    # ✨ FIX: Expanded the Literal to include all frontend sort options
+    sort: Optional[Literal["date_desc", "date_asc", "amount_desc", "amount_asc", "category_asc"]] = Query(default="date_desc")
 ):
     try:
         query_filter = {"user_id": user_id}
 
-        # ✨ FIX: Ensure we only fetch transactions that have an account_id.
-        # This prevents validation errors for old data that might be missing this field.
         query_filter["account_id"] = {"$exists": True}
 
         if account_id:
@@ -89,12 +88,15 @@ async def get_transactions(
                 {"person": {"$regex": regex}}
             ]
         
-        sort_field, sort_order = "date", -1
-        if sort == "amount_desc":
-            sort_field = "amount"
-        elif sort == "category_asc":
-            sort_field = "category"
-            sort_order = 1
+        # ✨ FIX: Replaced the incomplete if/elif block with a more robust dictionary lookup
+        sort_options = {
+            "date_desc": ("date", -1),
+            "date_asc": ("date", 1),
+            "amount_desc": ("amount", -1),
+            "amount_asc": ("amount", 1),
+            "category_asc": ("category", 1)
+        }
+        sort_field, sort_order = sort_options.get(sort, ("date", -1)) # Default to newest first
             
         cursor = db.transactions.find(query_filter).sort(sort_field, sort_order).limit(limit)
         return [Transaction(**t) for t in await cursor.to_list(length=limit)]
