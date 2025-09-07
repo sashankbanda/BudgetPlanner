@@ -9,6 +9,8 @@ import api from '../services/api';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
 import { cn } from '../lib/utils';
+// ✨ FIX: Import the new component
+import PasswordRequirements from '../components/PasswordRequirements';
 
 const ResetPasswordPage = () => {
     const [token, setToken] = useState(null);
@@ -79,7 +81,6 @@ const ResetPasswordPage = () => {
                     ) : (
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                {/* ✨ FIX: Added className to make the label visible ✨ */}
                                 <Label htmlFor="new-password" className="text-gray-300">New Password</Label>
                                 <div className="relative">
                                     <Input
@@ -95,9 +96,10 @@ const ResetPasswordPage = () => {
                                     </button>
                                 </div>
                                 <PasswordStrengthMeter password={newPassword} />
+                                {/* ✨ FIX: Add the requirements checklist component */}
+                                <PasswordRequirements password={newPassword} />
                             </div>
                             <div>
-                                {/* ✨ FIX: Added className to make the label visible ✨ */}
                                 <Label htmlFor="confirm-password" className="text-gray-300">Confirm New Password</Label>
                                 <div className="relative">
                                     <Input

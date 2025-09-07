@@ -13,8 +13,9 @@ import { Loader2, Eye, EyeOff } from 'lucide-react';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
 import { cn } from '../lib/utils';
 import { Checkbox } from '../components/ui/checkbox';
+// ✨ FIX: Import the new component
+import PasswordRequirements from '../components/PasswordRequirements';
 
-// Google Icon SVG (no changes)
 const GoogleIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -25,8 +26,6 @@ const GoogleIcon = () => (
     </svg>
 );
 
-
-// ✨ FIX: Modified the dialog's form submission logic
 const ForgotPasswordDialog = () => {
     const { toast } = useToast();
     const [email, setEmail] = useState('');
@@ -34,7 +33,6 @@ const ForgotPasswordDialog = () => {
     const [isOpen, setIsOpen] = useState(false);
 
     const handleSubmit = async () => {
-        // No event (e) needed anymore
         if (!email) {
             toast({ title: "Error", description: "Please enter your email address.", variant: "destructive" });
             return;
@@ -64,7 +62,6 @@ const ForgotPasswordDialog = () => {
                         Enter your account's email address and we will send you a link to reset your password.
                     </DialogDescription>
                 </DialogHeader>
-                {/* ✨ FIX: Removed the <form> wrapper */}
                 <div className="space-y-4">
                     <div>
                         <Label htmlFor="reset-email" className="text-gray-300">Email</Label>
@@ -74,7 +71,6 @@ const ForgotPasswordDialog = () => {
                         <DialogClose asChild>
                             <Button type="button" variant="secondary" className="glass-button">Cancel</Button>
                         </DialogClose>
-                        {/* ✨ FIX: Changed button type to "button" and added onClick handler */}
                         <Button type="button" onClick={handleSubmit} className="glass-button neon-glow" disabled={loading}>
                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Send Reset Link
@@ -93,7 +89,6 @@ const AuthPage = () => {
     const navigate = useNavigate();
     const { toast } = useToast();
 
-    // Form State
     const [loginEmail, setLoginEmail] = useState('');
     const [loginPassword, setLoginPassword] = useState('');
     const [rememberMe, setRememberMe] = useState(true);
@@ -101,12 +96,10 @@ const AuthPage = () => {
     const [signupPassword, setSignupPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     
-    // UI State
     const [showLoginPassword, setShowLoginPassword] = useState(false);
     const [showSignupPassword, setShowSignupPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    // Validation State
     const [errors, setErrors] = useState({});
 
     useEffect(() => {
@@ -147,7 +140,7 @@ const AuthPage = () => {
         try {
             const response = await api.auth.signup(signupEmail, signupPassword);
             toast({ title: "Welcome!", description: response.message || "Account created successfully. Please check your email to verify your account." });
-            setActiveTab('login'); // Switch to login tab after signup
+            setActiveTab('login'); 
         } catch (error) {
             toast({ title: "Signup Failed", description: error.message, variant: "destructive" });
         } finally {
@@ -185,7 +178,6 @@ const AuthPage = () => {
                     <TabsTrigger value="signup" className="glass-button data-[state=active]:electric-glow">Sign Up</TabsTrigger>
                 </TabsList>
                 
-                {/* Login Form */}
                 <TabsContent value="login">
                     <Card className="glass-card border-0">
                         <CardHeader><CardTitle className="electric-accent text-center text-2xl">Welcome Back</CardTitle></CardHeader>
@@ -228,7 +220,6 @@ const AuthPage = () => {
                     </Card>
                 </TabsContent>
 
-                {/* Signup Form */}
                 <TabsContent value="signup">
                     <Card className="glass-card border-0">
                         <CardHeader><CardTitle className="electric-accent text-center text-2xl">Create Account</CardTitle></CardHeader>
@@ -248,6 +239,8 @@ const AuthPage = () => {
                                         </button>
                                     </div>
                                     <PasswordStrengthMeter password={signupPassword} />
+                                    {/* ✨ FIX: Add the requirements checklist component */}
+                                    <PasswordRequirements password={signupPassword} />
                                     {errors.signupPassword && <p className="text-xs text-red-400 mt-1">{errors.signupPassword}</p>}
                                 </div>
                                 <div>
