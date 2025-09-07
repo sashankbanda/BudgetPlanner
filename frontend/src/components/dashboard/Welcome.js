@@ -3,9 +3,11 @@ import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Loader2, Wallet } from 'lucide-react';
+// ✨ FIX: Import the LogOut icon
+import { Loader2, Wallet, LogOut } from 'lucide-react';
 
-const Welcome = ({ handleCreateAccount, loading }) => {
+// ✨ FIX: Accept handleLogout as a prop
+const Welcome = ({ handleCreateAccount, loading, handleLogout }) => {
     const [accountName, setAccountName] = useState('');
 
     const onSubmit = (e) => {
@@ -17,7 +19,12 @@ const Welcome = ({ handleCreateAccount, loading }) => {
 
     return (
         <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
-            <Card className="glass-card w-full max-w-md text-center">
+            {/* ✨ FIX: Added `relative` positioning to the card to contain the button */}
+            <Card className="glass-card w-full max-w-md text-center relative">
+                {/* ✨ FIX: Added the absolute-positioned logout button */}
+                <Button variant="ghost" size="icon" onClick={handleLogout} className="absolute top-4 right-4 text-gray-400 hover:text-white h-8 w-8">
+                    <LogOut className="w-5 h-5" />
+                </Button>
                 <CardHeader>
                     <div className="mx-auto bg-gray-800/50 p-3 rounded-full mb-4">
                         <Wallet className="w-8 h-8 electric-accent" />
