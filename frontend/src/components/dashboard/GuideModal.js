@@ -8,7 +8,7 @@ const GuideModal = () => {
     const [isOpen, setIsOpen] = useState(false);
 
     // NOTE: Replace this with your actual YouTube video ID
-    const videoId = "dQw4w9WgXcQ"; 
+    const videoId = "ZcdskdApbgk"; 
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
