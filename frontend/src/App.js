@@ -4,7 +4,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import BudgetDashboard from './pages/BudgetDashboard';
 import AuthPage from './pages/AuthPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
-import ResetPasswordPage from './pages/ResetPasswordPage'; // ✨ IMPORT THE NEW PAGE
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import VerifyEmailPage from './pages/VerifyEmailPage'; // 1. IMPORT THE NEW PAGE
 import { Toaster } from "./components/ui/toaster";
 
 const PrivateRoute = ({ children }) => {
@@ -20,8 +21,9 @@ function App() {
           {/* Public routes */}
           <Route path="/login" element={<AuthPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
-          {/* ✨ ADD THIS NEW ROUTE FOR PASSWORD RESET ✨ */}
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          {/* 2. ADD THIS NEW ROUTE FOR EMAIL VERIFICATION */}
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
           
           {/* Protected route for the main dashboard */}
           <Route 

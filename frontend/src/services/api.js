@@ -96,7 +96,6 @@ export const authAPI = {
     },
     signup: async (email, password) => {
         try {
-            // ✨ FIX: Don't auto-login on signup. Just return the backend message.
             const response = await apiClient.post('/users/signup', { email, password });
             return response.data;
         } catch (error) {
@@ -138,8 +137,23 @@ export const authAPI = {
             handleApiError(error);
         }
     },
-    verifyEmail: (token) => apiClient.get(`/users/verify-email?token=${token}`).then(res => res.data),
-    resendVerification: () => apiClient.post('/users/resend-verification').then(res => res.data),
+    verifyEmail: async (token) => {
+        try {
+            const response = await apiClient.get(`/users/verify-email?token=${token}`);
+            return response.data;
+        } catch (error) {
+            handleApiError(error);
+        }
+    },
+    // MODIFIED THIS FUNCTION
+    resendVerification: async (email) => {
+        try {
+            const response = await apiClient.post('/users/resend-verification', { email });
+            return response.data;
+        } catch (error) {
+            handleApiError(error);
+        }
+    },
 };
 
 
@@ -203,3 +217,4 @@ const api = {
 };
 
 export default api;
+
