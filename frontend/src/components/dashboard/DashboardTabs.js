@@ -8,31 +8,31 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart a
 import TransactionList from './TransactionList';
 import TrendControls from './TrendControls';
 import { Button } from '../ui/button';
-import { Label } from '../ui/label'; // ✨ ADDED
-import { Badge } from '../ui/badge'; // ✨ ADDED
+import { Label } from '../ui/label';
+import { Badge } from '../ui/badge';
 import { cn } from '../../lib/utils';
 import CreateGroupDialog from './CreateGroupDialog';
-import EditGroupDialog from './EditGroupDialog'; // ✨ ADDED
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu'; // ✨ ADDED
+import EditGroupDialog from './EditGroupDialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 
 const COLORS = { income: '#00ff88', expense: '#ff4757', electric: '#00bfff' };
 const pieColors = ['#00ff88', '#ff4757', '#00bfff', '#ffa502', '#2ed573', '#ff6348', '#70a1ff'];
 
 const DashboardTabs = ({
-    activeTab, setActiveTab, chartData, peopleStats, groupStats,
+    // ✨ FIX: Added the 'people' prop here to make it available to the component
+    activeTab, setActiveTab, chartData, peopleStats, groupStats, people,
     transactions, loading, handleEditClick, handleDeleteClick,
     filters, handleFilterChange, uniqueCategories, isFilterActive, filteredTotals,
     trendPeriod, setTrendPeriod, trendDateRange, setTrendDateRange,
     onSettleUpClick, handleCreateGroup, groups,
-    handleUpdateGroup, onDeleteGroupClick // ✨ ADDED
+    handleUpdateGroup, onDeleteGroupClick
 }) => {
 
     const [selectMode, setSelectMode] = useState(false);
     const [selectedPeople, setSelectedPeople] = useState([]);
     const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
-    const [isEditGroupOpen, setIsEditGroupOpen] = useState(false); // ✨ ADDED
-    const [editingGroup, setEditingGroup] = useState(null); // ✨ ADDED
-
+    const [isEditGroupOpen, setIsEditGroupOpen] = useState(false);
+    const [editingGroup, setEditingGroup] = useState(null);
 
     const handlePersonSelect = (personName) => {
         setSelectedPeople(prev =>
@@ -186,8 +186,7 @@ const DashboardTabs = ({
                     </Card>
                 </TabsContent>
                 
-                {/* ✨ UPDATED: Groups Tab with Member List and Transaction Count ✨ */}
-                {/* ✨ UPDATED Groups Tab ✨ */}
+                {/* Groups Tab */}
                 <TabsContent value="groups">
                      <Card className="glass-card">
                          <CardHeader>
@@ -244,7 +243,6 @@ const DashboardTabs = ({
                          </CardContent>
                      </Card>
                  </TabsContent>
-                
 
                 {/* Trends and Transactions Tabs */}
                 <TabsContent value="trends">
@@ -298,7 +296,6 @@ const DashboardTabs = ({
                 </div>
             )}
 
-            {/* Create Group Dialog */}
             <CreateGroupDialog
                 isOpen={isCreateGroupOpen}
                 onOpenChange={setIsCreateGroupOpen}
@@ -308,7 +305,7 @@ const DashboardTabs = ({
                     toggleSelectMode();
                 }}
             />
-            {/* ✨ ADDED EditGroupDialog ✨ */}
+
             <EditGroupDialog
                 isOpen={isEditGroupOpen}
                 onOpenChange={setIsEditGroupOpen}
