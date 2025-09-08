@@ -138,7 +138,14 @@ export const authAPI = {
             handleApiError(error);
         }
     },
-    verifyEmail: (token) => apiClient.get(`/users/verify-email?token=${token}`).then(res => res.data),
+    verifyEmail: async (token) => {
+        try {
+            const response = await apiClient.get(`/users/verify-email?token=${token}`);
+            return response.data;
+        } catch (error) {
+            handleApiError(error);
+        }
+    },
     resendVerification: () => apiClient.post('/users/resend-verification').then(res => res.data),
 };
 
