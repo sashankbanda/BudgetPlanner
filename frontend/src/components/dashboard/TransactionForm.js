@@ -1,9 +1,12 @@
+// frontend/src/components/dashboard/TransactionForm.js
+
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group'; // ✨ ADDED
 import { Plus } from 'lucide-react';
 import { incomeCategories, expenseCategories } from '../../mock';
 
@@ -12,7 +15,7 @@ const personCategories = ["To Friends", "From Friends", "To Parents", "From Pare
 const TransactionForm = ({
     isOpen, onOpenChange, resetForm,
     formData, setFormData, editingTransaction,
-    accounts, people, onSubmit
+    accounts, people, groups, onSubmit // ✨ ADDED groups
 }) => {
     const showPersonField = personCategories.includes(formData.category);
 
@@ -20,6 +23,15 @@ const TransactionForm = ({
         onOpenChange(isOpen);
         if (!isOpen) {
             resetForm();
+        }
+    };
+
+    const handleTransactionWithChange = (value) => {
+        // When switching between person/group, clear the other's value
+        if (value === 'person') {
+            setFormData(prev => ({ ...prev, transaction_with: value, group_id: '' }));
+        } else {
+            setFormData(prev => ({ ...prev, transaction_with: value, person: '' }));
         }
     };
 
@@ -34,7 +46,6 @@ const TransactionForm = ({
             <DialogContent className="glass-effect border-0 text-white">
                 <DialogHeader>
                     <DialogTitle className="electric-accent">{editingTransaction ? 'Edit Transaction' : 'Add New Transaction'}</DialogTitle>
-                    {/* ADDED: DialogDescription to prevent accessibility warnings */}
                     <DialogDescription className="text-gray-400">
                         Fill in the details below to log a new income or expense.
                     </DialogDescription>
@@ -79,24 +90,49 @@ const TransactionForm = ({
                         </div>
                     )}
                     {showPersonField && (
-                        <>
-                            <div>
-                                <Label>Person</Label>
-                                <Select value={formData.person} onValueChange={(value) => setFormData(prev => ({ ...prev, person: value }))}>
-                                    <SelectTrigger className="glass-input"><SelectValue placeholder="Select person..." /></SelectTrigger>
-                                    <SelectContent className="glass-effect border-0 text-white">
-                                        {people.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                                        <SelectItem value="add_new" className="electric-accent">+ Add New Person</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            {formData.person === 'add_new' && (
+                        <div className="space-y-4 p-3 glass-effect rounded-md">
+                            <RadioGroup value={formData.transaction_with} onValueChange={handleTransactionWithChange} className="flex gap-4">
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="person" id="r1" />
+                                    <Label htmlFor="r1">Person</Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem value="group" id="r2" />
+                                    <Label htmlFor="r2">Group</Label>
+                                </div>
+                            </RadioGroup>
+                            
+                            {formData.transaction_with === 'person' ? (
+                                <>
+                                    <div>
+                                        <Label>Person</Label>
+                                        <Select value={formData.person} onValueChange={(value) => setFormData(prev => ({ ...prev, person: value }))}>
+                                            <SelectTrigger className="glass-input"><SelectValue placeholder="Select person..." /></SelectTrigger>
+                                            <SelectContent className="glass-effect border-0 text-white">
+                                                {people.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                                                <SelectItem value="add_new" className="electric-accent">+ Add New Person</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    {formData.person === 'add_new' && (
+                                        <div>
+                                            <Label>New Person Name</Label>
+                                            <Input className="glass-input" value={formData.newPerson} onChange={(e) => setFormData(prev => ({ ...prev, newPerson: e.target.value }))} placeholder="e.g., Alex, Mom..." />
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
                                 <div>
-                                    <Label>New Person Name</Label>
-                                    <Input className="glass-input" value={formData.newPerson} onChange={(e) => setFormData(prev => ({ ...prev, newPerson: e.target.value }))} placeholder="e.g., Alex, Mom..." />
+                                    <Label>Group</Label>
+                                    <Select value={formData.group_id} onValueChange={(value) => setFormData(prev => ({ ...prev, group_id: value }))}>
+                                        <SelectTrigger className="glass-input"><SelectValue placeholder="Select group..." /></SelectTrigger>
+                                        <SelectContent className="glass-effect border-0 text-white">
+                                            {groups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             )}
-                        </>
+                        </div>
                     )}
                     <div>
                         <Label>Amount</Label>
