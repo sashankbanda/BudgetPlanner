@@ -19,7 +19,7 @@ from google.auth.transport import requests as google_requests
 from jose import jwt, JWTError
 
 from fastapi_mail import FastMail, MessageSchema, MessageType
-from email_service import conf 
+from email_service import conf
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -47,7 +47,7 @@ class GoogleLoginRequest(BaseModel):
 
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
-async def create_user(user: UserCreate, db: AsyncIOMotorDatabase = Depends(get_database)):
+async def create_user(user: UserCreate, background_tasks: BackgroundTasks, db: AsyncIOMotorDatabase = Depends(get_database)):
     if len(user.password) < 8:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -75,9 +75,20 @@ async def create_user(user: UserCreate, db: AsyncIOMotorDatabase = Depends(get_d
     
     await db.users.insert_one(user_document)
     
-    logging.warning(f"--- EMAIL VERIFICATION SIMULATION ---")
-    logging.warning(f"Verification link for {user.email}: /verify-email?token={verification_token}")
-    logging.warning(f"------------------------------------")
+    # Use your frontend's URL. It's best to set this in your .env file.
+    frontend_url = os.environ.get("FRONTEND_URL", "https://allocash.netlify.app")
+    verification_url = f"{frontend_url}/verify-email?token={verification_token}"
+
+    message = MessageSchema(
+        subject="Verify Your Email for Budget Planner",
+        recipients=[user.email],
+        template_body={"verification_url": verification_url},
+        subtype=MessageType.html
+    )
+    
+    fm = FastMail(conf)
+    # Use a background task to send the email without blocking the response
+    background_tasks.add_task(fm.send_message, message, template_name="verification.html")
     
     return {"message": "Signup successful. Please check your email to verify your account."}
 
