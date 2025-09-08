@@ -27,30 +27,28 @@ function Calendar({
         ),
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
-        table: "w-full border-collapse space-y-1",
+        // ✨ FIX 1: Removed 'w-full' to allow the table to fit its content, fixing alignment.
+        table: "border-collapse space-y-1",
         head_row: "flex",
-        // ✨ FIX: Ensured day labels are centered
         head_cell:
-          "text-muted-foreground rounded-md w-8 text-center font-normal text-[0.8rem]",
+          "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]",
         row: "flex w-full mt-2",
-        // ✨ FIX: Gave the cell itself a fixed width and height
         cell: cn(
-          "relative h-8 w-8 p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected].day-range-end)]:rounded-r-md",
+          "relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected].day-range-end)]:rounded-r-md",
           props.mode === "range"
             ? "[&:has(>.day-range-end)]:rounded-r-md [&:has(>.day-range-start)]:rounded-l-md first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md"
             : "[&:has([aria-selected])]:rounded-md"
         ),
-        // ✨ FIX: Removed fixed size from the button so it fills the cell
         day: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-full w-full p-0 font-normal aria-selected:opacity-100"
+          "h-8 w-8 p-0 font-normal aria-selected:opacity-100"
         ),
         day_range_start: "day-range-start",
         day_range_end: "day-range-end",
         day_selected:
           "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
         day_today: "bg-accent text-accent-foreground",
-        // ✨ FIX: Hide "outside" days if they are part of a selection to prevent duplicates
+        // ✨ FIX 2: Hide "outside" days if they are selected to prevent duplicates.
         day_outside: "day-outside text-muted-foreground opacity-50 aria-selected:opacity-0",
         day_disabled: "text-muted-foreground opacity-50",
         day_range_middle:
