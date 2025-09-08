@@ -5,7 +5,7 @@ import { useBudgetData } from '../hooks/useBudgetData';
 import DashboardHeader from '../components/dashboard/DashboardHeader';
 import StatCards from '../components/dashboard/StatCards';
 import DashboardTabs from '../components/dashboard/DashboardTabs';
-import Welcome from '../components/dashboard/Welcome'; // ✨ IMPORT THE NEW COMPONENT
+import Welcome from '../components/dashboard/Welcome'; 
 
 const BudgetDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview');
@@ -58,13 +58,16 @@ const BudgetDashboard = () => {
         }
     };
 
-    // ✨ THE CORE LOGIC CHANGE IS HERE ✨
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white p-4">
             <div className="max-w-7xl mx-auto">
-                {/* If there are no accounts, show the Welcome screen. Otherwise, show the dashboard. */}
+                {/* ✨ FIX: Pass the handleLogout function to the Welcome component ✨ */}
                 {budgetData.accounts.length === 0 ? (
-                    <Welcome handleCreateAccount={handleCreateFirstAccount} loading={isCreatingFirstAccount} />
+                    <Welcome 
+                        handleCreateAccount={handleCreateFirstAccount} 
+                        loading={isCreatingFirstAccount} 
+                        handleLogout={budgetData.handleLogout}
+                    />
                 ) : (
                     <>
                         <DashboardHeader {...budgetData} />
@@ -82,31 +85,31 @@ const BudgetDashboard = () => {
             {/* Dialogs remain the same */}
             <AlertDialog open={budgetData.isDeleteDialogOpen} onOpenChange={budgetData.setIsDeleteDialogOpen}>
                <AlertDialogContent className="glass-card text-white border-0">
-                 <AlertDialogHeader>
-                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                   <AlertDialogDescription className="text-gray-400">
-                     This action cannot be undone. This will permanently delete this transaction from our servers.
-                   </AlertDialogDescription>
-                 </AlertDialogHeader>
-                 <AlertDialogFooter>
-                   <AlertDialogCancel className="glass-button">Cancel</AlertDialogCancel>
-                   <AlertDialogAction className="glass-button expense-glow" onClick={budgetData.handleDeleteConfirm}>Continue</AlertDialogAction>
-                 </AlertDialogFooter>
+                   <AlertDialogHeader>
+                       <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                       <AlertDialogDescription className="text-gray-400">
+                         This action cannot be undone. This will permanently delete this transaction from our servers.
+                       </AlertDialogDescription>
+                   </AlertDialogHeader>
+                   <AlertDialogFooter>
+                       <AlertDialogCancel className="glass-button">Cancel</AlertDialogCancel>
+                       <AlertDialogAction className="glass-button expense-glow" onClick={budgetData.handleDeleteConfirm}>Continue</AlertDialogAction>
+                   </AlertDialogFooter>
                </AlertDialogContent>
             </AlertDialog>
 
             <AlertDialog open={isSettleUpOpen} onOpenChange={setIsSettleUpOpen}>
                <AlertDialogContent className="glass-card text-white border-0">
-                 <AlertDialogHeader>
-                   <AlertDialogTitle>Settle Balance with {settlingPerson?.name}?</AlertDialogTitle>
-                   <AlertDialogDescription className="text-gray-400">
-                     {getSettleUpMessage()}
-                   </AlertDialogDescription>
-                 </AlertDialogHeader>
-                 <AlertDialogFooter>
-                   <AlertDialogCancel className="glass-button">Cancel</AlertDialogCancel>
-                   <AlertDialogAction className="glass-button neon-glow" onClick={handleSettleUpConfirm}>Confirm Settlement</AlertDialogAction>
-                 </AlertDialogFooter>
+                   <AlertDialogHeader>
+                       <AlertDialogTitle>Settle Balance with {settlingPerson?.name}?</AlertDialogTitle>
+                       <AlertDialogDescription className="text-gray-400">
+                         {getSettleUpMessage()}
+                       </AlertDialogDescription>
+                   </AlertDialogHeader>
+                   <AlertDialogFooter>
+                       <AlertDialogCancel className="glass-button">Cancel</AlertDialogCancel>
+                       <AlertDialogAction className="glass-button neon-glow" onClick={handleSettleUpConfirm}>Confirm Settlement</AlertDialogAction>
+                   </AlertDialogFooter>
                </AlertDialogContent>
             </AlertDialog>
         </div>
@@ -114,4 +117,3 @@ const BudgetDashboard = () => {
 };
 
 export default BudgetDashboard;
-

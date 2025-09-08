@@ -199,3 +199,9 @@ body {
         box-shadow: 0 0 30px rgba(0, 191, 255, 0.4), 0 0 60px rgba(0, 191, 255, 0.2);
     }
 }
+
+/* ✨ FIX: Added this rule to make the date picker icon visible on dark backgrounds ✨ */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+}

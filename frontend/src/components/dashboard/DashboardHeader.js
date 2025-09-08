@@ -4,6 +4,8 @@ import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import AccountManager from './AccountManager';
 import TransactionForm from './TransactionForm';
+// ✨ FIX: Import the new GuideModal component
+import GuideModal from './GuideModal';
 
 const DashboardHeader = ({
     accounts, selectedAccountId, setSelectedAccountId,
@@ -44,6 +46,9 @@ const DashboardHeader = ({
                     handleDeleteAccount={handleDeleteAccount}
                 />
                 
+                {/* ✨ FIX: Add the GuideModal component here */}
+                <GuideModal />
+
                 <TransactionForm
                     isOpen={isFormDialogOpen}
                     onOpenChange={setIsFormDialogOpen}
