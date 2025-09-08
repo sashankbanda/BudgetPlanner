@@ -45,6 +45,10 @@ class ResetPasswordRequest(BaseModel):
 class GoogleLoginRequest(BaseModel):
     id_token: str
 
+# ADD THIS NEW CLASS
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def create_user(user: UserCreate, background_tasks: BackgroundTasks, db: AsyncIOMotorDatabase = Depends(get_database)):
@@ -126,19 +130,16 @@ async def google_login(request: GoogleLoginRequest, db: AsyncIOMotorDatabase = D
 
     user = await db.users.find_one({"_id": email})
     
-    # ✨ FIX: Logic to handle existing but unverified accounts
     if not user:
-        # User does not exist, create a new one, verified by default
         new_user_doc = {
             "_id": email,
             "email": email,
-            "hashed_password": None, # No password for Google-only signup
+            "hashed_password": None,
             "verified": True,
             "created_at": datetime.utcnow()
         }
         await db.users.insert_one(new_user_doc)
     else:
-        # User exists, check if they are verified. If not, verify them.
         if not user.get("verified", False):
             await db.users.update_one(
                 {"_id": email},
@@ -245,3 +246,39 @@ async def verify_email(token: str, db: AsyncIOMotorDatabase = Depends(get_databa
     if not user:
         raise HTTPException(status_code=400, detail="Invalid or expired verification token.")
     return {"message": "Email verified successfully. You can now log in."}
+
+# ADD THIS NEW ENDPOINT
+@router.post("/resend-verification", status_code=status.HTTP_200_OK)
+async def resend_verification_email(
+    request: ResendVerificationRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    user = await db.users.find_one({"_id": request.email})
+
+    # Only proceed if the user exists and is NOT verified
+    if user and not user.get("verified", False):
+        verification_token = str(uuid.uuid4())
+        
+        # Update the user's token in the DB
+        await db.users.update_one(
+            {"_id": request.email},
+            {"$set": {"verification_token": verification_token}}
+        )
+
+        frontend_url = os.environ.get("FRONTEND_URL", "https://allocash.netlify.app")
+        verification_url = f"{frontend_url}/verify-email?token={verification_token}"
+
+        message = MessageSchema(
+            subject="Verify Your Email for Budget Planner (New Link)",
+            recipients=[request.email],
+            template_body={"verification_url": verification_url},
+            subtype=MessageType.html
+        )
+        
+        fm = FastMail(conf)
+        background_tasks.add_task(fm.send_message, message, template_name="verification.html")
+
+    # Always return the same message to prevent email enumeration attacks
+    return {"message": "If an unverified account with this email exists, a new verification link has been sent."}
+
