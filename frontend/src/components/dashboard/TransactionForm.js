@@ -1,12 +1,10 @@
-// frontend/src/components/dashboard/TransactionForm.js
-
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { RadioGroup, RadioGroupItem } from '../ui/radio-group'; // ✨ ADDED
+import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Plus } from 'lucide-react';
 import { incomeCategories, expenseCategories } from '../../mock';
 
@@ -15,7 +13,7 @@ const personCategories = ["To Friends", "From Friends", "To Parents", "From Pare
 const TransactionForm = ({
     isOpen, onOpenChange, resetForm,
     formData, setFormData, editingTransaction,
-    accounts, people, groups, onSubmit // ✨ ADDED groups
+    accounts, people, groups, onSubmit
 }) => {
     const showPersonField = personCategories.includes(formData.category);
 
@@ -27,7 +25,6 @@ const TransactionForm = ({
     };
 
     const handleTransactionWithChange = (value) => {
-        // When switching between person/group, clear the other's value
         if (value === 'person') {
             setFormData(prev => ({ ...prev, transaction_with: value, group_id: '' }));
         } else {
@@ -51,6 +48,7 @@ const TransactionForm = ({
                     </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 pt-4">
+                    {/* ... Account, Type, and Category Selects ... */}
                     <div>
                         <Label>Account</Label>
                         <Select value={formData.account_id} onValueChange={(value) => setFormData(prev => ({ ...prev, account_id: value }))}>
@@ -89,15 +87,18 @@ const TransactionForm = ({
                             <Input className="glass-input" value={formData.customCategory} onChange={(e) => setFormData(prev => ({ ...prev, customCategory: e.target.value }))} placeholder="Enter custom category" />
                         </div>
                     )}
+                    
                     {showPersonField && (
                         <div className="space-y-4 p-3 glass-effect rounded-md">
                             <RadioGroup value={formData.transaction_with} onValueChange={handleTransactionWithChange} className="flex gap-4">
                                 <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="person" id="r1" />
+                                    {/* ✨ FIX: Added styling to radio buttons */}
+                                    <RadioGroupItem value="person" id="r1" className="border-gray-600 data-[state=checked]:border-sky-500 text-sky-400" />
                                     <Label htmlFor="r1">Person</Label>
                                 </div>
                                 <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="group" id="r2" />
+                                    {/* ✨ FIX: Added styling to radio buttons */}
+                                    <RadioGroupItem value="group" id="r2" className="border-gray-600 data-[state=checked]:border-sky-500 text-sky-400" />
                                     <Label htmlFor="r2">Group</Label>
                                 </div>
                             </RadioGroup>
@@ -134,6 +135,8 @@ const TransactionForm = ({
                             )}
                         </div>
                     )}
+                    
+                    {/* ... Amount, Description, and Date Inputs ... */}
                     <div>
                         <Label>Amount</Label>
                         <Input className="glass-input" type="number" step="0.01" min="0" value={formData.amount} onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))} placeholder="0.00" />
@@ -146,6 +149,7 @@ const TransactionForm = ({
                         <Label>Date</Label>
                         <Input className="glass-input" type="date" value={formData.date} onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))} />
                     </div>
+
                     <Button onClick={onSubmit} className="w-full glass-button neon-glow">
                         {editingTransaction ? 'Save Changes' : 'Add Transaction'}
                     </Button>
