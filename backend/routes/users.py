@@ -18,13 +18,11 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from jose import jwt, JWTError
 
-# ✨ NEW IMPORTS FOR EMAIL
 from fastapi_mail import FastMail, MessageSchema, MessageType
-from email_service import conf # Import the configuration we created
+from email_service import conf 
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-# --- Models (no changes needed here) ---
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
@@ -47,10 +45,6 @@ class ResetPasswordRequest(BaseModel):
 class GoogleLoginRequest(BaseModel):
     id_token: str
 
-
-# --- Endpoints ---
-
-# ... (signup, login, google-login, token/refresh endpoints remain the same) ...
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def create_user(user: UserCreate, db: AsyncIOMotorDatabase = Depends(get_database)):
@@ -120,15 +114,25 @@ async def google_login(request: GoogleLoginRequest, db: AsyncIOMotorDatabase = D
         raise HTTPException(status_code=401, detail="Invalid Google token")
 
     user = await db.users.find_one({"_id": email})
+    
+    # ✨ FIX: Logic to handle existing but unverified accounts
     if not user:
+        # User does not exist, create a new one, verified by default
         new_user_doc = {
             "_id": email,
             "email": email,
-            "hashed_password": None,
+            "hashed_password": None, # No password for Google-only signup
             "verified": True,
             "created_at": datetime.utcnow()
         }
         await db.users.insert_one(new_user_doc)
+    else:
+        # User exists, check if they are verified. If not, verify them.
+        if not user.get("verified", False):
+            await db.users.update_one(
+                {"_id": email},
+                {"$set": {"verified": True}}
+            )
 
     access_token = create_access_token(data={"sub": email})
     refresh_token = create_refresh_token(data={"sub": email})
@@ -161,11 +165,10 @@ async def refresh_access_token(request: RefreshTokenRequest, db: AsyncIOMotorDat
     return {"access_token": new_access_token, "token_type": "bearer", "refresh_token": new_refresh_token}
 
 
-# ✨ MODIFIED: This endpoint now sends a real email.
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
 async def forgot_password(
     request: ForgotPasswordRequest,
-    background_tasks: BackgroundTasks, # To send email in the background
+    background_tasks: BackgroundTasks,
     db: AsyncIOMotorDatabase = Depends(get_database)
 ):
     user = await db.users.find_one({"_id": request.email})
@@ -180,7 +183,6 @@ async def forgot_password(
 
         reset_url = f"https://allocash.netlify.app/reset-password?token={token}"
         
-        # Define the email message
         message = MessageSchema(
             subject="Your Password Reset Link for Budget Planner",
             recipients=[request.email],
@@ -188,14 +190,12 @@ async def forgot_password(
             subtype=MessageType.html
         )
         
-        # Send the email
         fm = FastMail(conf)
         background_tasks.add_task(fm.send_message, message, template_name="password_reset.html")
 
     return {"message": "If an account with this email exists, a password reset link has been sent."}
 
 
-# ✨ NO CHANGES BELOW THIS LINE, BUT INCLUDED FOR COMPLETENESS ✨
 @router.post("/reset-password", status_code=status.HTTP_200_OK)
 async def reset_password(request: ResetPasswordRequest, db: AsyncIOMotorDatabase = Depends(get_database)):
     if len(request.new_password) < 8:
