@@ -1,7 +1,7 @@
 // frontend/src/components/dashboard/DashboardTabs.js
 
 import React, { useState } from 'react';
-import { BarChart3, PieChart, LineChart as LineChartIcon, Users, User, Check, Users2 } from 'lucide-react';
+import { BarChart3, PieChart, LineChart as LineChartIcon, Users, User, Check, Users2, MoreVertical } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, LineChart, Line } from 'recharts';
