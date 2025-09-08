@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -19,13 +19,18 @@ const AccountManager = ({
             <DialogContent className="glass-effect border-0 text-white">
                 <DialogHeader>
                     <DialogTitle className="electric-accent">Manage Accounts</DialogTitle>
+                    {/* ADDED: DialogDescription to fix accessibility warning */}
+                    <DialogDescription className="text-gray-400">
+                        Add new financial accounts or remove existing ones. Deleting an account will also remove all of its associated transactions.
+                    </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4">
+                <div className="space-y-4 pt-4">
                     <div className="space-y-2">
                         <Label>Add New Account</Label>
                         <div className="flex gap-2">
                             <Input className="glass-input" placeholder="e.g., HDFC Savings" value={newAccountName} onChange={e => setNewAccountName(e.target.value)} />
-                            <Button className="glass-button neon-glow" onClick={handleCreateAccount}>Add</Button>
+                            {/* MODIFIED: Changed onClick to pass the name directly */}
+                            <Button className="glass-button neon-glow" onClick={() => handleCreateAccount(newAccountName)}>Add</Button>
                         </div>
                     </div>
                     <div className="space-y-2">

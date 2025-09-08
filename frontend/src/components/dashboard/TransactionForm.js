@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -34,8 +34,12 @@ const TransactionForm = ({
             <DialogContent className="glass-effect border-0 text-white">
                 <DialogHeader>
                     <DialogTitle className="electric-accent">{editingTransaction ? 'Edit Transaction' : 'Add New Transaction'}</DialogTitle>
+                    {/* ADDED: DialogDescription to prevent accessibility warnings */}
+                    <DialogDescription className="text-gray-400">
+                        Fill in the details below to log a new income or expense.
+                    </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4">
+                <div className="space-y-4 pt-4">
                     <div>
                         <Label>Account</Label>
                         <Select value={formData.account_id} onValueChange={(value) => setFormData(prev => ({ ...prev, account_id: value }))}>
