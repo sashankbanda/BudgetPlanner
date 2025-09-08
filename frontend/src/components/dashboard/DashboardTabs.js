@@ -8,8 +8,10 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart a
 import TransactionList from './TransactionList';
 import TrendControls from './TrendControls';
 import { Button } from '../ui/button';
+import { Label } from '../ui/label'; // ✨ ADDED
+import { Badge } from '../ui/badge'; // ✨ ADDED
 import { cn } from '../../lib/utils';
-import CreateGroupDialog from './CreateGroupDialog'; // ✨ ADDED
+import CreateGroupDialog from './CreateGroupDialog';
 
 const COLORS = { income: '#00ff88', expense: '#ff4757', electric: '#00bfff' };
 const pieColors = ['#00ff88', '#ff4757', '#00bfff', '#ffa502', '#2ed573', '#ff6348', '#70a1ff'];
@@ -19,10 +21,9 @@ const DashboardTabs = ({
     transactions, loading, handleEditClick, handleDeleteClick,
     filters, handleFilterChange, uniqueCategories, isFilterActive, filteredTotals,
     trendPeriod, setTrendPeriod, trendDateRange, setTrendDateRange,
-    onSettleUpClick, handleCreateGroup, groups // ✨ ADDED handleCreateGroup & groups
+    onSettleUpClick, handleCreateGroup, groups
 }) => {
 
-    // ✨ ADDED: State for group creation
     const [selectMode, setSelectMode] = useState(false);
     const [selectedPeople, setSelectedPeople] = useState([]);
     const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
@@ -37,7 +38,7 @@ const DashboardTabs = ({
 
     const toggleSelectMode = () => {
         setSelectMode(!selectMode);
-        setSelectedPeople([]); // Reset selection when toggling mode
+        setSelectedPeople([]);
     };
 
     return (
@@ -47,12 +48,12 @@ const DashboardTabs = ({
                     <TabsTrigger value="overview" className="glass-button data-[state=active]:electric-glow"><BarChart3 className="w-4 h-4 mr-2" />Overview</TabsTrigger>
                     <TabsTrigger value="categories" className="glass-button data-[state=active]:electric-glow"><PieChart className="w-4 h-4 mr-2" />Categories</TabsTrigger>
                     <TabsTrigger value="people" className="glass-button data-[state=active]:electric-glow"><Users className="w-4 h-4 mr-2" />People</TabsTrigger>
-                    <TabsTrigger value="groups" className="glass-button data-[state=active]:electric-glow"><Users2 className="w-4 h-4 mr-2" />Groups</TabsTrigger> {/* ✨ ADDED */}
+                    <TabsTrigger value="groups" className="glass-button data-[state=active]:electric-glow"><Users2 className="w-4 h-4 mr-2" />Groups</TabsTrigger>
                     <TabsTrigger value="trends" className="glass-button data-[state=active]:electric-glow"><LineChartIcon className="w-4 h-4 mr-2" />Trends</TabsTrigger>
                     <TabsTrigger value="transactions" className="glass-button data-[state=active]:electric-glow">Transactions</TabsTrigger>
                 </TabsList>
 
-                {/* Overview and Categories Tabs remain the same... */}
+                {/* Overview and Categories Tabs */}
                 <TabsContent value="overview">
                      <Card className="glass-card">
                          <CardHeader>
@@ -122,7 +123,7 @@ const DashboardTabs = ({
                      </div>
                  </TabsContent>
 
-                {/* ✨ MODIFIED: People Tab with Select Mode ✨ */}
+                {/* People Tab with Select Mode */}
                 <TabsContent value="people">
                     <Card className="glass-card">
                         <CardHeader className="flex flex-row items-center justify-between">
@@ -178,8 +179,8 @@ const DashboardTabs = ({
                         </CardContent>
                     </Card>
                 </TabsContent>
-
-                {/* ✨ ADDED: Groups Tab ✨ */}
+                
+                {/* ✨ UPDATED: Groups Tab with Member List and Transaction Count ✨ */}
                 <TabsContent value="groups">
                      <Card className="glass-card">
                          <CardHeader>
@@ -192,12 +193,21 @@ const DashboardTabs = ({
                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                      {groupStats.map((group) => (
                                          <Card key={group.id} className="glass-effect p-4 flex flex-col justify-between">
-                                             <div className="mb-4">
-                                                 <CardTitle className="text-xl electric-accent flex items-center gap-2"><Users2 className="w-5 h-5" /> {group.name}</CardTitle>
-                                                 <p className="text-xs text-gray-400">{group.members.length} member(s)</p>
+                                             <div>
+                                                <div className="mb-2">
+                                                    <CardTitle className="text-xl electric-accent flex items-center gap-2"><Users2 className="w-5 h-5" /> {group.name}</CardTitle>
+                                                    <p className="text-xs text-gray-400">{group.members.length} member(s) • {group.transaction_count} transaction(s)</p>
+                                                </div>
+                                                <div className="mb-4">
+                                                    <Label className="text-xs text-gray-500">Members</Label>
+                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                        {group.members.map(member => (
+                                                            <Badge key={member} variant="secondary" className="font-normal bg-gray-700/50 text-gray-300">{member}</Badge>
+                                                        ))}
+                                                    </div>
+                                                </div>
                                              </div>
-                                             {/* In a future step, we would add a Group Detail page here */}
-                                             <div className="border-t border-white/10 mt-4 pt-4">
+                                             <div className="border-t border-white/10 mt-auto pt-4">
                                                  <div className="flex justify-between items-center font-bold">
                                                      <span className="text-gray-300">Your Net Balance:</span>
                                                      <span className={group.net_balance >= 0 ? 'income-accent' : 'expense-accent'}>{group.net_balance >= 0 ? `+${group.net_balance.toFixed(2)}` : `${group.net_balance.toFixed(2)}`}</span>
@@ -212,8 +222,7 @@ const DashboardTabs = ({
                      </Card>
                  </TabsContent>
 
-
-                {/* Trends and Transactions Tabs remain the same... */}
+                {/* Trends and Transactions Tabs */}
                 <TabsContent value="trends">
                     <Card className="glass-card">
                         <CardHeader>
@@ -250,9 +259,9 @@ const DashboardTabs = ({
                 </TabsContent>
             </Tabs>
 
-            {/* ✨ ADDED: Action Bar for Group Creation ✨ */}
+            {/* Action Bar for Group Creation */}
             {selectMode && selectedPeople.length > 0 && (
-                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-auto">
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-auto z-50">
                     <div className="glass-effect p-2 flex items-center gap-4">
                         <p className="text-sm text-gray-300">{selectedPeople.length} people selected</p>
                         <Button 
@@ -265,7 +274,7 @@ const DashboardTabs = ({
                 </div>
             )}
 
-            {/* ✨ ADDED: Create Group Dialog ✨ */}
+            {/* Create Group Dialog */}
             <CreateGroupDialog
                 isOpen={isCreateGroupOpen}
                 onOpenChange={setIsCreateGroupOpen}
