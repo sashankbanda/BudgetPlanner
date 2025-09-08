@@ -5,7 +5,7 @@ import { useBudgetData } from '../hooks/useBudgetData';
 import DashboardHeader from '../components/dashboard/DashboardHeader';
 import StatCards from '../components/dashboard/StatCards';
 import DashboardTabs from '../components/dashboard/DashboardTabs';
-import Welcome from '../components/dashboard/Welcome'; 
+import Welcome from '../components/dashboard/Welcome';
 
 const BudgetDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview');
@@ -14,7 +14,6 @@ const BudgetDashboard = () => {
 
     const budgetData = useBudgetData();
     
-    // State for the Welcome component's create account loading state
     const [isCreatingFirstAccount, setIsCreatingFirstAccount] = useState(false);
 
     const onSettleUpClick = (person) => {
@@ -27,16 +26,15 @@ const BudgetDashboard = () => {
             const accountId = budgetData.accounts.length > 0 ? budgetData.accounts[0].id : null;
             budgetData.handleSettleUp(settlingPerson, accountId);
         }
+        setIsSettleUpOpen(false);
     };
 
-    // A specific handler for the Welcome screen to show a loading state
     const handleCreateFirstAccount = async (accountName) => {
         setIsCreatingFirstAccount(true);
         await budgetData.handleCreateAccount(accountName);
         setIsCreatingFirstAccount(false);
     };
 
-    // Loading state for the entire page
     if (budgetData.loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white flex items-center justify-center">
@@ -51,17 +49,14 @@ const BudgetDashboard = () => {
     const getSettleUpMessage = () => {
         if (!settlingPerson) return "";
         const amount = Math.abs(settlingPerson.net_balance).toFixed(2);
-        if (settlingPerson.net_balance > 0) {
-            return `This will create an expense of $${amount} to record that you paid back ${settlingPerson.name}. Are you sure?`;
-        } else {
-            return `This will create an income of $${amount} to record that ${settlingPerson.name} paid you back. Are you sure?`;
-        }
+        const action = settlingPerson.net_balance > 0 ? `record that ${settlingPerson.name} paid you back` : `record that you paid back ${settlingPerson.name}`;
+        const transactionType = settlingPerson.net_balance > 0 ? "income" : "expense";
+        return `This will create an ${transactionType} of $${amount} to ${action}. Are you sure?`;
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white p-4">
+        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white p-4 sm:p-6 md:p-8">
             <div className="max-w-7xl mx-auto">
-                {/* ✨ FIX: Pass the handleLogout function to the Welcome component ✨ */}
                 {budgetData.accounts.length === 0 ? (
                     <Welcome 
                         handleCreateAccount={handleCreateFirstAccount} 
@@ -76,41 +71,42 @@ const BudgetDashboard = () => {
                             activeTab={activeTab}
                             setActiveTab={setActiveTab}
                             onSettleUpClick={onSettleUpClick}
+                            // MODIFIED: Pass the new transaction-specific loading state here
+                            loading={budgetData.isTransactionLoading} 
                             {...budgetData}
                         />
                     </>
                 )}
             </div>
 
-            {/* Dialogs remain the same */}
             <AlertDialog open={budgetData.isDeleteDialogOpen} onOpenChange={budgetData.setIsDeleteDialogOpen}>
                <AlertDialogContent className="glass-card text-white border-0">
                    <AlertDialogHeader>
                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                        <AlertDialogDescription className="text-gray-400">
-                         This action cannot be undone. This will permanently delete this transaction from our servers.
+                           This action cannot be undone. This will permanently delete the transaction.
                        </AlertDialogDescription>
                    </AlertDialogHeader>
                    <AlertDialogFooter>
                        <AlertDialogCancel className="glass-button">Cancel</AlertDialogCancel>
-                       <AlertDialogAction className="glass-button expense-glow" onClick={budgetData.handleDeleteConfirm}>Continue</AlertDialogAction>
+                       <AlertDialogAction className="glass-button expense-glow" onClick={budgetData.handleDeleteConfirm}>Delete</AlertDialogAction>
                    </AlertDialogFooter>
                </AlertDialogContent>
             </AlertDialog>
-
+            
             <AlertDialog open={isSettleUpOpen} onOpenChange={setIsSettleUpOpen}>
-               <AlertDialogContent className="glass-card text-white border-0">
-                   <AlertDialogHeader>
-                       <AlertDialogTitle>Settle Balance with {settlingPerson?.name}?</AlertDialogTitle>
-                       <AlertDialogDescription className="text-gray-400">
-                         {getSettleUpMessage()}
-                       </AlertDialogDescription>
-                   </AlertDialogHeader>
-                   <AlertDialogFooter>
-                       <AlertDialogCancel className="glass-button">Cancel</AlertDialogCancel>
-                       <AlertDialogAction className="glass-button neon-glow" onClick={handleSettleUpConfirm}>Confirm Settlement</AlertDialogAction>
-                   </AlertDialogFooter>
-               </AlertDialogContent>
+                <AlertDialogContent className="glass-card text-white border-0">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Settle Balance with {settlingPerson?.name}?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-gray-400">
+                           {getSettleUpMessage()}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="glass-button">Cancel</AlertDialogCancel>
+                        <AlertDialogAction className="glass-button neon-glow" onClick={handleSettleUpConfirm}>Confirm</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
             </AlertDialog>
         </div>
     );
