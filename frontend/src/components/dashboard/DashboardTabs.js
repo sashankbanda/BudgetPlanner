@@ -12,6 +12,8 @@ import { Label } from '../ui/label'; // ✨ ADDED
 import { Badge } from '../ui/badge'; // ✨ ADDED
 import { cn } from '../../lib/utils';
 import CreateGroupDialog from './CreateGroupDialog';
+import EditGroupDialog from './EditGroupDialog'; // ✨ ADDED
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu'; // ✨ ADDED
 
 const COLORS = { income: '#00ff88', expense: '#ff4757', electric: '#00bfff' };
 const pieColors = ['#00ff88', '#ff4757', '#00bfff', '#ffa502', '#2ed573', '#ff6348', '#70a1ff'];
@@ -21,12 +23,16 @@ const DashboardTabs = ({
     transactions, loading, handleEditClick, handleDeleteClick,
     filters, handleFilterChange, uniqueCategories, isFilterActive, filteredTotals,
     trendPeriod, setTrendPeriod, trendDateRange, setTrendDateRange,
-    onSettleUpClick, handleCreateGroup, groups
+    onSettleUpClick, handleCreateGroup, groups,
+    handleUpdateGroup, onDeleteGroupClick // ✨ ADDED
 }) => {
 
     const [selectMode, setSelectMode] = useState(false);
     const [selectedPeople, setSelectedPeople] = useState([]);
     const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+    const [isEditGroupOpen, setIsEditGroupOpen] = useState(false); // ✨ ADDED
+    const [editingGroup, setEditingGroup] = useState(null); // ✨ ADDED
+
 
     const handlePersonSelect = (personName) => {
         setSelectedPeople(prev =>
@@ -181,6 +187,7 @@ const DashboardTabs = ({
                 </TabsContent>
                 
                 {/* ✨ UPDATED: Groups Tab with Member List and Transaction Count ✨ */}
+                {/* ✨ UPDATED Groups Tab ✨ */}
                 <TabsContent value="groups">
                      <Card className="glass-card">
                          <CardHeader>
@@ -192,10 +199,26 @@ const DashboardTabs = ({
                              ) : (
                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                      {groupStats.map((group) => (
-                                         <Card key={group.id} className="glass-effect p-4 flex flex-col justify-between">
+                                         <Card key={group.id} className="glass-effect p-4 flex flex-col justify-between relative">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7 text-gray-400 hover:text-white">
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end" className="glass-effect border-0 text-white">
+                                                    <DropdownMenuItem onSelect={() => { setEditingGroup(group); setIsEditGroupOpen(true); }}>
+                                                        Edit Group
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={() => onDeleteGroupClick(group.id)} className="text-red-400 focus:bg-red-900/50 focus:text-red-300">
+                                                        Delete Group
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+
                                              <div>
                                                 <div className="mb-2">
-                                                    <CardTitle className="text-xl electric-accent flex items-center gap-2"><Users2 className="w-5 h-5" /> {group.name}</CardTitle>
+                                                    <CardTitle className="text-xl electric-accent flex items-center gap-2 mr-8"><Users2 className="w-5 h-5" /> {group.name}</CardTitle>
                                                     <p className="text-xs text-gray-400">{group.members.length} member(s) • {group.transaction_count} transaction(s)</p>
                                                 </div>
                                                 <div className="mb-4">
@@ -221,6 +244,7 @@ const DashboardTabs = ({
                          </CardContent>
                      </Card>
                  </TabsContent>
+                
 
                 {/* Trends and Transactions Tabs */}
                 <TabsContent value="trends">
@@ -283,6 +307,14 @@ const DashboardTabs = ({
                     handleCreateGroup(groupData);
                     toggleSelectMode();
                 }}
+            />
+            {/* ✨ ADDED EditGroupDialog ✨ */}
+            <EditGroupDialog
+                isOpen={isEditGroupOpen}
+                onOpenChange={setIsEditGroupOpen}
+                group={editingGroup}
+                allPeople={people}
+                onUpdateGroup={handleUpdateGroup}
             />
         </>
     );

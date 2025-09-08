@@ -161,10 +161,12 @@ export const accountAPI = {
     delete: (id) => apiClient.delete(`/accounts/${id}`).then(res => res.data),
 };
 
-// ✨ ADDED groupAPI ✨
+// ✨ UPDATE groupAPI ✨
 export const groupAPI = {
     create: (data) => apiClient.post('/groups', data).then(res => res.data),
     getAll: () => apiClient.get('/groups').then(res => res.data),
+    update: (id, data) => apiClient.put(`/groups/${id}`, data).then(res => res.data),
+    delete: (id) => apiClient.delete(`/groups/${id}`).then(res => res.data),
 };
 
 export const transactionAPI = {

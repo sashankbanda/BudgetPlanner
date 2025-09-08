@@ -133,6 +133,28 @@ export const useBudgetData = () => {
         }
     };
     
+        // ✨ ADDED: Handler to update a group ✨
+    const handleUpdateGroup = async (groupId, groupData) => {
+        try {
+            await api.groups.update(groupId, groupData);
+            toast({ title: "Success!", description: `Group '${groupData.name}' has been updated.` });
+            await loadCoreData(); // Refresh all data
+        } catch (error) {
+            toast({ title: "Error", description: `Failed to update group: ${error.message}`, variant: "destructive" });
+        }
+    };
+
+    // ✨ ADDED: Handler to delete a group ✨
+    const handleDeleteGroup = async (groupId) => {
+        try {
+            await api.groups.delete(groupId);
+            toast({ title: "Success!", description: "Group has been deleted." });
+            await loadCoreData(); // Refresh all data
+        } catch (error) {
+            toast({ title: "Error", description: `Failed to delete group: ${error.message}`, variant: "destructive" });
+        }
+    };
+
     const handleCreateAccount = async (name) => {
         const accountName = name || newAccountName;
         if (!accountName.trim()) {
@@ -282,6 +304,8 @@ export const useBudgetData = () => {
         handleFormSubmit, handleEditClick, handleDeleteClick, handleDeleteConfirm,
         handleFilterChange,
         handleCreateGroup, // ✨ ADDED
+        handleUpdateGroup, // ✨ ADDED
+        handleDeleteGroup, // ✨ ADDED
 
         uniqueCategories, filteredTotals, isFilterActive,
     };
