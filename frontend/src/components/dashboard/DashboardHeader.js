@@ -4,7 +4,6 @@ import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import AccountManager from './AccountManager';
 import TransactionForm from './TransactionForm';
-// ✨ FIX: Import the new GuideModal component
 import GuideModal from './GuideModal';
 
 const DashboardHeader = ({
@@ -15,7 +14,8 @@ const DashboardHeader = ({
     isFormDialogOpen, setIsFormDialogOpen,
     resetForm, formData, setFormData,
     editingTransaction, handleFormSubmit, people,
-    handleLogout
+    handleLogout,
+    groups // ✨ ADDED groups prop
 }) => {
     return (
         <header className="header-glow glass-effect p-4 sm:p-6 mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 text-center sm:text-left">
@@ -46,7 +46,6 @@ const DashboardHeader = ({
                     handleDeleteAccount={handleDeleteAccount}
                 />
                 
-                {/* ✨ FIX: Add the GuideModal component here */}
                 <GuideModal />
 
                 <TransactionForm
@@ -58,6 +57,7 @@ const DashboardHeader = ({
                     editingTransaction={editingTransaction}
                     accounts={accounts}
                     people={people}
+                    groups={groups} // ✨ FIX: Pass the groups prop down to the form
                     onSubmit={handleFormSubmit}
                 />
 

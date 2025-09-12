@@ -11,6 +11,9 @@ const BudgetDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview');
     const [isSettleUpOpen, setIsSettleUpOpen] = useState(false);
     const [settlingPerson, setSettlingPerson] = useState(null);
+    // ✨ ADDED: State for group deletion confirmation ✨
+    const [isDeletingGroupOpen, setIsDeletingGroupOpen] = useState(false);
+    const [deletingGroupId, setDeletingGroupId] = useState(null);
 
     const budgetData = useBudgetData();
     
@@ -53,6 +56,22 @@ const BudgetDashboard = () => {
         const transactionType = settlingPerson.net_balance > 0 ? "income" : "expense";
         return `This will create an ${transactionType} of $${amount} to ${action}. Are you sure?`;
     };
+
+    // ✨ ADDED: Handlers for group deletion flow ✨
+    const onDeleteGroupClick = (groupId) => {
+        setDeletingGroupId(groupId);
+        setIsDeletingGroupOpen(true);
+    };
+
+    const handleDeleteGroupConfirm = () => {
+        if (deletingGroupId) {
+            budgetData.handleDeleteGroup(deletingGroupId);
+        }
+        setIsDeletingGroupOpen(false);
+        setDeletingGroupId(null);
+    };
+
+    if (budgetData.loading) { /* ... existing loading UI ... */ }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white p-4 sm:p-6 md:p-8">
@@ -105,6 +124,22 @@ const BudgetDashboard = () => {
                     <AlertDialogFooter>
                         <AlertDialogCancel className="glass-button">Cancel</AlertDialogCancel>
                         <AlertDialogAction className="glass-button neon-glow" onClick={handleSettleUpConfirm}>Confirm</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* ✨ ADDED: Delete Group Confirmation Dialog ✨ */}
+            <AlertDialog open={isDeletingGroupOpen} onOpenChange={setIsDeletingGroupOpen}>
+                <AlertDialogContent className="glass-card text-white border-0">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure you want to delete this group?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-gray-400">
+                            This action cannot be undone. Transactions associated with this group will be kept but unlinked from the group.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="glass-button">Cancel</AlertDialogCancel>
+                        <AlertDialogAction className="glass-button expense-glow" onClick={handleDeleteGroupConfirm}>Delete Group</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

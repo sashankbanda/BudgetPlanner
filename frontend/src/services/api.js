@@ -1,3 +1,5 @@
+// frontend/src/services/api.js
+
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 
@@ -55,22 +57,18 @@ apiClient.interceptors.request.use(
 // Helper to handle API errors
 const handleApiError = (error) => {
     if (error.response) {
-        // The request was made and the server responded with a status code
         const detail = error.response.data.detail;
         if (typeof detail === 'string') {
             throw new Error(detail);
         } else if (Array.isArray(detail)) {
-            // Handle FastAPI validation errors
             const messages = detail.map(err => `${err.loc.length > 1 ? err.loc[1] : 'Error'}: ${err.msg}`).join(', ');
             throw new Error(messages);
         } else {
             throw new Error(error.response.data.detail || 'An unknown error occurred.');
         }
     } else if (error.request) {
-        // The request was made but no response was received
         throw new Error('No response from server. Please check your connection.');
     } else {
-        // Something happened in setting up the request that triggered an Error
         throw new Error(error.message);
     }
 };
@@ -145,7 +143,6 @@ export const authAPI = {
             handleApiError(error);
         }
     },
-    // MODIFIED THIS FUNCTION
     resendVerification: async (email) => {
         try {
             const response = await apiClient.post('/users/resend-verification', { email });
@@ -162,6 +159,14 @@ export const accountAPI = {
     create: (data) => apiClient.post('/accounts', data).then(res => res.data),
     update: (id, data) => apiClient.put(`/accounts/${id}`, data).then(res => res.data),
     delete: (id) => apiClient.delete(`/accounts/${id}`).then(res => res.data),
+};
+
+// ✨ UPDATE groupAPI ✨
+export const groupAPI = {
+    create: (data) => apiClient.post('/groups', data).then(res => res.data),
+    getAll: () => apiClient.get('/groups').then(res => res.data),
+    update: (id, data) => apiClient.put(`/groups/${id}`, data).then(res => res.data),
+    delete: (id) => apiClient.delete(`/groups/${id}`).then(res => res.data),
 };
 
 export const transactionAPI = {
@@ -200,6 +205,11 @@ export const statsAPI = {
         const params = accountId && accountId !== 'all' ? { account_id: accountId } : {};
         return apiClient.get('/stats/people', { params }).then(res => res.data);
     },
+    // ✨ ADDED getGroupsSummaryStats ✨
+    getGroupsSummaryStats: (accountId) => {
+        const params = accountId && accountId !== 'all' ? { account_id: accountId } : {};
+        return apiClient.get('/stats/groups', { params }).then(res => res.data);
+    },
 };
 
 export const peopleAPI = {
@@ -211,10 +221,10 @@ export const peopleAPI = {
 const api = {
     auth: authAPI,
     accounts: accountAPI,
+    groups: groupAPI, // ✨ ADDED
     transactions: transactionAPI,
     stats: statsAPI,
     people: peopleAPI
 };
 
 export default api;
-
