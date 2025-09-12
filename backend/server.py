@@ -12,7 +12,7 @@ from routes.transactions import router as transactions_router
 from routes.stats import router as stats_router
 from routes.users import router as users_router
 from routes.people import router as people_router
-from routes.accounts import router as accounts_router  # ✨ ADDED
+from routes.accounts import router as accounts_router # ✨ ADDED
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -34,12 +34,16 @@ async def lifespan(app: FastAPI):
         # Indexes for transactions
         await db.transactions.create_index([("user_id", 1), ("account_id", 1)])
         await db.transactions.create_index([("user_id", 1), ("date", -1)])
+        await db.transactions.create_index([("user_id", 1), ("group_id", 1)]) # ✨ ADDED
         
         # Index for users
         await db.users.create_index([("email", 1)], unique=True)
 
-        # ✨ ADDED: Index for accounts
+        # Index for accounts
         await db.accounts.create_index([("user_id", 1)])
+        
+        # ✨ ADDED: Index for groups
+        await db.groups.create_index([("user_id", 1)])
 
         logger.info("Database indexes created successfully")
     except Exception as e:
@@ -84,9 +88,10 @@ async def health_check():
         return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
 
 # Include all routers
-api_router.include_router(accounts_router)  # ✨ ADDED
+api_router.include_router(accounts_router) # ✨ ADDED
 api_router.include_router(users_router)
 api_router.include_router(people_router)
+api_router.include_router(groups_router) # ✨ ADDED
 api_router.include_router(transactions_router)
 api_router.include_router(stats_router)
 

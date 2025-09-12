@@ -11,7 +11,15 @@ class TransactionBase(BaseModel):
     description: str = ""
     date: str
     person: Optional[str] = None
-    account_id: str # ✨ ADDED: Every transaction must belong to an account.
+    group_id: Optional[str] = None # ✨ ADDED
+    account_id: str
+
+    # ✨ ADDED: Validator to ensure a transaction isn't linked to both
+    @validator('person', always=True)
+    def check_person_or_group(cls, v, values):
+        if v is not None and values.get('group_id') is not None:
+            raise ValueError('Transaction cannot be linked to both a person and a group.')
+        return v
 
 class TransactionCreate(TransactionBase):
     @validator('amount')
@@ -41,9 +49,16 @@ class TransactionUpdate(BaseModel):
     description: Optional[str] = None
     date: Optional[str] = None
     person: Optional[str] = None
-    account_id: Optional[str] = None # ✨ ADDED: Allow changing the account
+    group_id: Optional[str] = None # ✨ ADDED
+    account_id: Optional[str] = None
 
-    # Validators remain the same
+    # ✨ ADDED: Validator to update model
+    @validator('person', always=True)
+    def check_person_or_group_update(cls, v, values):
+        if v is not None and values.get('group_id') is not None:
+            raise ValueError('Transaction cannot be linked to both a person and a group.')
+        return v
+    
     @validator('amount')
     def amount_must_be_positive(cls, v):
         if v is not None and v <= 0:
@@ -75,7 +90,6 @@ class Transaction(TransactionBase):
     @classmethod
     def from_create(cls, transaction_create: TransactionCreate, user_id: str):
         month = transaction_create.date[:7]
-        # ✨ SIMPLIFIED: Pass all fields from the create model directly
         return cls(
             user_id=user_id,
             month=month,
@@ -105,14 +119,12 @@ class PersonStats(BaseModel):
     net_balance: float = 0.0
     transaction_count: int = 0
 
-# ✨ ADD THIS NEW MODEL AT THE END OF THE FILE ✨
 class SettleUpPayload(BaseModel):
     """Defines the data required to settle a balance with a person."""
     account_id: str
 
-# ✨ NEW: Pydantic model for our new granular trend data ✨
 class GranularTrendStats(BaseModel):
-    date: str # This will be a day (YYYY-MM-DD), week (YYYY-WW), or month (YYYY-MM)
+    date: str
     income: float = 0.0
     expense: float = 0.0
     net: float = 0.0

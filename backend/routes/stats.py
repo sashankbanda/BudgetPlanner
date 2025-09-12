@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Literal, Optional
-from models.transaction import MonthlyStats, CategoryStats, TrendStats, PersonStats, GranularTrendStats # <-- MODIFIED
+from models.transaction import MonthlyStats, CategoryStats, TrendStats, PersonStats, GranularTrendStats
+from models.group import GroupSummary # ✨ ADDED
 from database import get_database
 from datetime import datetime, date, timedelta
 from auth import get_current_user_id
@@ -8,7 +9,66 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 router = APIRouter(prefix="/stats", tags=["statistics"])
 
-# ✨ NEW: Granular Trends Endpoint ✨
+# ✨ ADD THIS NEW ENDPOINT AT THE TOP ✨
+@router.get("/groups", response_model=List[GroupSummary])
+async def get_groups_summary_stats(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    account_id: Optional[str] = Query(None)
+):
+    """
+    Retrieves all groups for a user and calculates their net balance
+    based on associated transactions.
+    """
+    # Step 1: Get all groups for the user
+    groups_cursor = db.groups.find({"user_id": user_id}).sort("name", 1)
+    groups = await groups_cursor.to_list(length=None)
+    group_ids = [g["id"] for g in groups]
+
+    # Step 2: Build the aggregation pipeline for transactions
+    match_query = {
+        "user_id": user_id,
+        "group_id": {"$in": group_ids}
+    }
+    if account_id:
+        match_query["account_id"] = account_id
+
+    pipeline = [
+        {"$match": match_query},
+        {"$group": {
+            "_id": "$group_id",
+            "income": {"$sum": {"$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]}},
+            "expense": {"$sum": {"$cond": [{"$eq": ["$type", "expense"]}, "$amount", 0]}},
+            "count": {"$sum": 1}
+        }},
+        {"$project": {
+            "group_id": "$_id",
+            "net_balance": {"$subtract": ["$income", "$expense"]},
+            "transaction_count": "$count",
+            "_id": 0
+        }}
+    ]
+    
+    stats_cursor = db.transactions.aggregate(pipeline)
+    stats_by_group_id = {s["group_id"]: s for s in await stats_cursor.to_list(length=None)}
+
+    # Step 3: Combine group info with calculated stats
+    summaries = []
+    for group in groups:
+        stats = stats_by_group_id.get(group["id"], {})
+        summaries.append(GroupSummary(
+            id=group["id"],
+            name=group["name"],
+            members=group["members"],
+            net_balance=stats.get("net_balance", 0.0),
+            transaction_count=stats.get("transaction_count", 0)
+        ))
+        
+    return summaries
+
+
+# --- REST OF THE FILE REMAINS THE SAME ---
+
 @router.get("/trends_granular", response_model=List[GranularTrendStats])
 async def get_granular_trend_stats(
     user_id: str = Depends(get_current_user_id),
@@ -62,9 +122,6 @@ async def get_granular_trend_stats(
 
     cursor = db.transactions.aggregate(pipeline)
     return [GranularTrendStats(**r) for r in await cursor.to_list(length=None)]
-
-
-# --- EXISTING ENDPOINTS (with old /trends removed) ---
 
 @router.get("/monthly", response_model=List[MonthlyStats])
 async def get_monthly_stats(
