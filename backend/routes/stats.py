@@ -1,13 +1,42 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
+from pydantic import BaseModel
 from typing import List, Literal, Optional
 from models.transaction import MonthlyStats, CategoryStats, TrendStats, PersonStats, GranularTrendStats
-from models.group import GroupSummary # ✨ ADDED
+from models.group import GroupSummary 
 from database import get_database
 from datetime import datetime, date, timedelta
 from auth import get_current_user_id
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 router = APIRouter(prefix="/stats", tags=["statistics"])
+
+class DateRange(BaseModel):
+    first_transaction_date: Optional[date] = None
+    last_transaction_date: Optional[date] = None
+
+@router.get("/date-range", response_model=DateRange)
+async def get_transaction_date_range(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+):
+    """Gets the dates of the first and last transactions for the user."""
+    first_date_pipeline = [
+        {"$match": {"user_id": user_id}},
+        {"$sort": {"date": 1}},
+        {"$limit": 1},
+        {"$project": {"_id": 0, "date": "$date"}}
+    ]
+    last_date_pipeline = [
+        {"$match": {"user_id": user_id}},
+        {"$sort": {"date": -1}},
+        {"$limit": 1},
+        {"$project": {"_id": 0, "date": "$date"}}
+    ]
+    first_result = await db.transactions.aggregate(first_date_pipeline).to_list(length=1)
+    last_result = await db.transactions.aggregate(last_date_pipeline).to_list(length=1)
+    first_date = first_result[0]['date'] if first_result else None
+    last_date = last_result[0]['date'] if last_result else None
+    return DateRange(first_transaction_date=first_date, last_transaction_date=last_date)
 
 # ✨ ADD THIS NEW ENDPOINT AT THE TOP ✨
 @router.get("/groups", response_model=List[GroupSummary])
