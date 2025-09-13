@@ -86,7 +86,8 @@ const DashboardTabs = ({
                              <CardHeader><CardTitle className="expense-accent">Expense Categories</CardTitle></CardHeader>
                              <CardContent>
                                  <div className="chart-container">
-                                     <ResponsiveContainer width="100%" height={300}>
+                                     <ResponsiveContainer width=""
+                                         height={300}>
                                          <RechartsPieChart>
                                              <Pie dataKey="value" data={chartData.expenseData} cx="50%" cy="50%" outerRadius={80} label>
                                                  {chartData.expenseData.map((entry, index) => (<Cell key={`cell-${index}`} fill={pieColors[index % pieColors.length]} />))}
@@ -112,25 +113,45 @@ const DashboardTabs = ({
                                 <div className="text-center py-8"><p className="text-gray-400">No transactions with people found.</p></div>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {peopleStats.map((person) => (
-                                        <Card key={person.name} className="glass-effect p-4 flex flex-col justify-between">
-                                            <div className="mb-4">
-                                                <CardTitle className="text-xl electric-accent flex items-center gap-2"><User className="w-5 h-5" /> {person.name}</CardTitle>
-                                                <p className="text-xs text-gray-400">{person.transaction_count} transaction(s)</p>
-                                            </div>
-                                            <div className="space-y-2 text-sm">
-                                                <div className="flex justify-between items-center"><span className="text-gray-400">You Received:</span><span className="font-semibold income-accent">+${person.total_received.toFixed(2)}</span></div>
-                                                <div className="flex justify-between items-center"><span className="text-gray-400">You Gave:</span><span className="font-semibold expense-accent">-${person.total_given.toFixed(2)}</span></div>
-                                            </div>
-                                            <div className="border-t border-white/10 mt-4 pt-4">
-                                                <div className="flex justify-between items-center font-bold"><span className="text-gray-300">Net Balance:</span><span className={person.net_balance >= 0 ? 'income-accent' : 'expense-accent'}>{person.net_balance >= 0 ? `+${person.net_balance.toFixed(2)}` : `${person.net_balance.toFixed(2)}`}</span></div>
-                                                <p className="text-xs text-center text-gray-500 mt-1">{person.net_balance > 0 ? `${person.name} owes you.` : person.net_balance < 0 ? `You owe ${person.name}.` : 'Settled up.'}</p>
-                                            </div>
-                                            <div className="mt-4">
-                                                <Button className="w-full glass-button neon-glow" disabled={Math.abs(person.net_balance) < 0.01} onClick={() => onSettleUpClick(person)}>Settle Up</Button>
-                                            </div>
-                                        </Card>
-                                    ))}
+                                    {peopleStats.map((person) => {
+                                        const netBalance = person.net_balance || 0;
+                                        const totalReceived = person.total_received || 0;
+                                        const totalGiven = person.total_given || 0;
+                                        const transactionCount = person.transaction_count || 0;
+                                        
+                                        return (
+                                            <Card key={person.name} className="glass-effect p-4 flex flex-col justify-between">
+                                                <div className="mb-4">
+                                                    <CardTitle className="text-xl electric-accent flex items-center gap-2"><User className="w-5 h-5" /> {person.name}</CardTitle>
+                                                    <p className="text-xs text-gray-400">{transactionCount} transaction(s)</p>
+                                                </div>
+                                                <div className="space-y-2 text-sm">
+                                                    <div className="flex justify-between items-center"><span className="text-gray-400">You Received:</span><span className="font-semibold income-accent">+${totalReceived.toFixed(2)}</span></div>
+                                                    <div className="flex justify-between items-center"><span className="text-gray-400">You Gave:</span><span className="font-semibold expense-accent">-${totalGiven.toFixed(2)}</span></div>
+                                                </div>
+                                                <div className="border-t border-white/10 mt-4 pt-4">
+                                                    <div className="flex justify-between items-center font-bold">
+                                                        <span className="text-gray-300">Net Balance:</span>
+                                                        <span className={netBalance >= 0 ? 'income-accent' : 'expense-accent'}>
+                                                            {netBalance >= 0 ? `+${netBalance.toFixed(2)}` : `${netBalance.toFixed(2)}`}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-center text-gray-500 mt-1">
+                                                        {netBalance > 0 ? `${person.name} owes you.` : netBalance < 0 ? `You owe ${person.name}.` : 'Settled up.'}
+                                                    </p>
+                                                </div>
+                                                <div className="mt-4">
+                                                    <Button 
+                                                        className="w-full glass-button neon-glow" 
+                                                        disabled={Math.abs(netBalance) < 0.01} 
+                                                        onClick={() => onSettleUpClick(person)}
+                                                    >
+                                                        Settle Up
+                                                    </Button>
+                                                </div>
+                                            </Card>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </CardContent>
@@ -148,26 +169,41 @@ const DashboardTabs = ({
                                 <div className="text-center py-8"><p className="text-gray-400">No split expenses found.</p></div>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {splitSummaries.map((split) => (
-                                        <Card key={split.id} className="glass-effect p-4 flex flex-col justify-between">
-                                            <div className="mb-4">
-                                                <CardTitle className="text-xl electric-accent flex items-center gap-2"><Users2 className="w-5 h-5" /> {split.name}</CardTitle>
-                                                <p className="text-xs text-gray-400">{split.member_count} members</p>
-                                            </div>
-                                            <div className="space-y-2 text-sm">
-                                                <div className="flex justify-between items-center"><span className="text-gray-400">Total Amount:</span><span className="font-semibold expense-accent">${split.total_amount.toFixed(2)}</span></div>
-                                                <div className="flex justify-between items-center"><span className="text-gray-400">Your Share:</span><span className="font-semibold expense-accent">${split.your_share.toFixed(2)}</span></div>
-                                                <div className="flex justify-between items-center"><span className="text-gray-400">You Paid:</span><span className="font-semibold expense-accent">${split.you_paid.toFixed(2)}</span></div>
-                                            </div>
-                                            <div className="border-t border-white/10 mt-4 pt-4">
-                                                <div className="flex justify-between items-center font-bold"><span className="text-gray-300">Net Balance:</span><span className={split.net_balance >= 0 ? 'income-accent' : 'expense-accent'}>{split.net_balance >= 0 ? `+${split.net_balance.toFixed(2)}` : `${split.net_balance.toFixed(2)}`}</span></div>
-                                                <p className="text-xs text-center text-gray-500 mt-1">{split.net_balance > 0 ? 'You are owed money.' : split.net_balance < 0 ? 'You owe money.' : 'Settled up.'}</p>
-                                            </div>
-                                            <div className="mt-4">
-                                                <Button className="w-full glass-button neon-glow" onClick={() => onViewSplitDetails(split)}>View Details</Button>
-                                            </div>
-                                        </Card>
-                                    ))}
+                                    {splitSummaries.map((split) => {
+                                        const totalAmount = split.total_amount || 0;
+                                        const yourShare = split.your_share || 0;
+                                        const youPaid = split.you_paid || 0;
+                                        const netBalance = split.net_balance || 0;
+                                        const memberCount = split.member_count || 0;
+                                        
+                                        return (
+                                            <Card key={split.id} className="glass-effect p-4 flex flex-col justify-between">
+                                                <div className="mb-4">
+                                                    <CardTitle className="text-xl electric-accent flex items-center gap-2"><Users2 className="w-5 h-5" /> {split.name}</CardTitle>
+                                                    <p className="text-xs text-gray-400">{memberCount} members</p>
+                                                </div>
+                                                <div className="space-y-2 text-sm">
+                                                    <div className="flex justify-between items-center"><span className="text-gray-400">Total Amount:</span><span className="font-semibold expense-accent">${totalAmount.toFixed(2)}</span></div>
+                                                    <div className="flex justify-between items-center"><span className="text-gray-400">Your Share:</span><span className="font-semibold expense-accent">${yourShare.toFixed(2)}</span></div>
+                                                    <div className="flex justify-between items-center"><span className="text-gray-400">You Paid:</span><span className="font-semibold expense-accent">${youPaid.toFixed(2)}</span></div>
+                                                </div>
+                                                <div className="border-t border-white/10 mt-4 pt-4">
+                                                    <div className="flex justify-between items-center font-bold">
+                                                        <span className="text-gray-300">Net Balance:</span>
+                                                        <span className={netBalance >= 0 ? 'income-accent' : 'expense-accent'}>
+                                                            {netBalance >= 0 ? `+${netBalance.toFixed(2)}` : `${netBalance.toFixed(2)}`}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-center text-gray-500 mt-1">
+                                                        {netBalance > 0 ? 'You are owed money.' : netBalance < 0 ? 'You owe money.' : 'Settled up.'}
+                                                    </p>
+                                                </div>
+                                                <div className="mt-4">
+                                                    <Button className="w-full glass-button neon-glow" onClick={() => onViewSplitDetails(split)}>View Details</Button>
+                                                </div>
+                                            </Card>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </CardContent>
