@@ -7,7 +7,8 @@ import { Settings, Wallet, Trash2 } from 'lucide-react';
 
 const AccountManager = ({
     isOpen, onOpenChange, accounts, newAccountName,
-    setNewAccountName, handleCreateAccount, handleDeleteAccount
+    setNewAccountName, handleCreateAccount, handleDeleteAccount,
+    onDeleteAccountRequest // Accept the new prop
 }) => {
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -44,6 +45,25 @@ const AccountManager = ({
                                     </Button>
                                 </div>
                             )) : <p className="text-sm text-gray-400 text-center py-4">No accounts created yet.</p>}
+                        </div>
+                    </div>
+                    <div className="space-y-2 pt-4 mt-4 border-t border-red-500/30">
+                        <Label className="text-red-400">Danger Zone</Label>
+                        <div className="flex items-center justify-between p-3 glass-effect rounded-md border border-red-500/30">
+                            <div>
+                               <p className="font-semibold text-gray-200">Delete Account</p>
+                               <p className="text-xs text-gray-400">Permanently remove your account and all data.</p>
+                            </div>
+                            <Button 
+                                variant="destructive" 
+                                className="glass-button expense-glow bg-red-900/50 hover:bg-red-800/60 border-red-500/50 text-red-300"
+                                onClick={() => {
+                                    onOpenChange(false); // Close this modal first
+                                    onDeleteAccountRequest(); // Then trigger the confirmation modal
+                                }}
+                            >
+                                Delete
+                            </Button>
                         </div>
                     </div>
                 </div>

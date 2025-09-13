@@ -19,6 +19,11 @@ const BudgetDashboard = () => {
     
     const [isCreatingFirstAccount, setIsCreatingFirstAccount] = useState(false);
 
+    const handleDeleteAccountFinal = async () => {
+        await budgetData.handleDeleteUserAccount();
+        setIsDeleteAccountConfirmOpen(false);
+    };
+
     const onSettleUpClick = (person) => {
         setSettlingPerson(person);
         setIsSettleUpOpen(true);
@@ -84,7 +89,7 @@ const BudgetDashboard = () => {
                     />
                 ) : (
                     <>
-                        <DashboardHeader {...budgetData} />
+                        <DashboardHeader {...budgetData} onDeleteAccountRequest={() => setIsDeleteAccountConfirmOpen(true)}/>
                         <StatCards stats={budgetData.stats} />
                         <DashboardTabs
                             activeTab={activeTab}
@@ -143,6 +148,25 @@ const BudgetDashboard = () => {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            <AlertDialog open={isDeleteAccountConfirmOpen} onOpenChange={setIsDeleteAccountConfirmOpen}>
+                <AlertDialogContent className="glass-card text-white border-0">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="expense-accent">Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-gray-400">
+                            This action cannot be undone. This will permanently delete your account and all associated data, including transactions, financial accounts, and groups.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel asChild>
+                            <Button className="glass-button">Cancel</Button>
+                        </AlertDialogCancel>
+                        <AlertDialogAction asChild>
+                            <Button className="glass-button expense-glow" onClick={handleDeleteAccountFinal}>Yes, Delete My Account</Button>
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };

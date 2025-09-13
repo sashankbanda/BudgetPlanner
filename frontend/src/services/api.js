@@ -151,6 +151,16 @@ export const authAPI = {
             handleApiError(error);
         }
     },
+    // ADD THIS NEW FUNCTION
+    deleteAccount: async () => {
+        try {
+            const response = await apiClient.delete('/users/me');
+            authAPI.logout(); // Clear tokens after successful deletion
+            return response.data;
+        } catch (error) {
+            handleApiError(error);
+        }
+    },
 };
 
 

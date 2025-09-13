@@ -15,7 +15,8 @@ const DashboardHeader = ({
     resetForm, formData, setFormData,
     editingTransaction, handleFormSubmit, people,
     handleLogout,
-    groups // ✨ ADDED groups prop
+    groups, // ✨ ADDED groups prop
+    onDeleteAccountRequest // Accept the new prop
 }) => {
     return (
         <header className="header-glow glass-effect p-4 sm:p-6 mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 text-center sm:text-left">
@@ -44,6 +45,7 @@ const DashboardHeader = ({
                     setNewAccountName={setNewAccountName}
                     handleCreateAccount={handleCreateAccount}
                     handleDeleteAccount={handleDeleteAccount}
+                    onDeleteAccountRequest={onDeleteAccountRequest} // Pass it down
                 />
                 
                 <GuideModal />

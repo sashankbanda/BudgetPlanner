@@ -255,6 +255,16 @@ export const useBudgetData = () => {
         navigate('/login');
         toast({ title: "Logged Out" });
     };
+
+    const handleDeleteUserAccount = async () => {
+        try {
+            await api.auth.deleteAccount();
+            toast({ title: "Account Deleted", description: "Your account and all data have been permanently removed." });
+            navigate('/login');
+        } catch (error) {
+            toast({ title: "Error", description: `Failed to delete your account. ${error.message}`, variant: "destructive" });
+        }
+    };
     
     const handleFilterChange = (key, value) => setFilters(prev => ({ ...prev, [key]: value }));
 
@@ -324,7 +334,7 @@ export const useBudgetData = () => {
         handleCreateGroup, // ✨ ADDED
         handleUpdateGroup, // ✨ ADDED
         handleDeleteGroup, // ✨ ADDED
-
+        handleDeleteUserAccount, // Add the new handler
         uniqueCategories, filteredTotals, isFilterActive,
     };
 };
