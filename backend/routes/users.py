@@ -7,6 +7,7 @@ from auth import (
     verify_password,
     create_access_token,
     create_refresh_token,
+    get_current_user_id, # Ensure this is imported
 )
 from motor.motor_asyncio import AsyncIOMotorDatabase
 import logging
@@ -282,3 +283,25 @@ async def resend_verification_email(
     # Always return the same message to prevent email enumeration attacks
     return {"message": "If an unverified account with this email exists, a new verification link has been sent."}
 
+# ADD THIS to delete account completely
+@router.delete("/me", status_code=status.HTTP_200_OK)
+async def delete_current_user(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncIOMotorDatabase = Depends(get_database)
+):
+    """
+    Permanently deletes the current user and all their associated data.
+    This action is irreversible.
+    """
+    # Delete all data associated with the user first
+    await db.transactions.delete_many({"user_id": user_id})
+    await db.accounts.delete_many({"user_id": user_id})
+    await db.groups.delete_many({"user_id": user_id})
+    
+    # Finally, delete the user document itself
+    result = await db.users.delete_one({"_id": user_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    return {"message": "User account and all data have been permanently deleted."}
