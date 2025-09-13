@@ -262,13 +262,14 @@ export const useBudgetData = () => {
         setFormData({
             type: 'expense', category: '', amount: '', description: '',
             date: new Date().toISOString().split('T')[0], customCategory: '',
-            person: '', newPerson: '', 
-            account_id: accounts.length > 0 ? accounts[0].id : '',
-            transaction_with: 'person', // ✨ ADDED
-            group_id: '' // ✨ ADDED
+            person: '', newPerson: '',
+            // If a specific account is selected, use it. Otherwise, default to the first account.
+            account_id: selectedAccountId !== 'all' ? selectedAccountId : (accounts.length > 0 ? accounts[0].id : ''),
+            transaction_with: 'person',
+            group_id: ''
         });
         setEditingTransaction(null);
-    }, [accounts]);
+    }, [accounts, selectedAccountId]); // Add selectedAccountId to the dependency array
 
     const handleEditClick = (transaction) => {
         setEditingTransaction(transaction);
