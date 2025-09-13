@@ -97,14 +97,14 @@ const BudgetDashboard = () => {
                         />
                         <StatCards stats={budgetData.stats} />
                         <DashboardTabs
-                            activeTab={activeTab}
-                            setActiveTab={setActiveTab}
-                            onSettleUpClick={onSettleUpClick}
+                            activeTab={activeTab}
+                            setActiveTab={setActiveTab}
+                            onSettleUpClick={onSettleUpClick}
                             loading={budgetData.isTransactionLoading} 
-                            onDeleteGroupClick={onDeleteGroupClick}
-                            onViewSplitDetails={(split) => setViewingSplit(split)} // ✨ ADDED
+                            // REMOVED: onDeleteGroupClick={onDeleteGroupClick}
+                                onViewSplitDetails={(split) => setViewingSplit(split)}
                             {...budgetData}
-                        />
+                        />
                     </>
                 )}
             </div>

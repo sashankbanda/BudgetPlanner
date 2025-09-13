@@ -17,7 +17,7 @@ export const useBudgetData = () => {
     const [accounts, setAccounts] = useState([]);
     const [selectedAccountId, setSelectedAccountId] = useState('all');
     
-    const [groups, setGroups] = useState([]);
+    const [splitSummaries, setSplitSummaries] = useState([]); // RENAMED for clarity
     const [groupStats, setGroupStats] = useState([]);
     
     const [loading, setLoading] = useState(true);
@@ -89,7 +89,7 @@ export const useBudgetData = () => {
 
             const [
                 accountsData, dashboardStats, incomeStats, expenseStats, 
-                trendStats, peopleData, peopleStatsData, splitGroupsData // ✨ MODIFIED
+                trendStats, peopleData, peopleStatsData, splitGroupsData
             ] = await Promise.all([
                 api.accounts.getAll(),
                 api.stats.getDashboardStats(selectedAccountId),
@@ -98,12 +98,13 @@ export const useBudgetData = () => {
                 api.stats.getGranularTrendStats(trendParams),
                 api.people.getAll(),
                 api.stats.getPeopleStats(selectedAccountId),
-                api.stats.getSplits(selectedAccountId) // ✨ MODIFIED
+                api.stats.getSplits(selectedAccountId)
             ]);
 
             setAccounts(accountsData);
             setPeople(peopleData);
             setPeopleStats(peopleStatsData);
+            setSplitSummaries(splitGroupsData); // RENAMED
             setStats({ totalIncome: dashboardStats.total_income || 0, totalExpenses: dashboardStats.total_expenses || 0, balance: dashboardStats.balance || 0, transactionCount: dashboardStats.transaction_count || 0 });
             setChartData({ incomeData: incomeStats, expenseData: expenseStats, trendData: trendStats });
             setGroupStats(splitGroupsData); // ✨ MODIFIED
@@ -324,7 +325,7 @@ export const useBudgetData = () => {
         peopleStats, accounts, selectedAccountId, isManageAccountsOpen, newAccountName, 
         isFormDialogOpen, editingTransaction, isDeleteDialogOpen, filters, formData,
         trendPeriod, trendDateRange,
-        groups, groupStats,
+        splitSummaries, // RENAMED
         
         setSelectedAccountId, setIsManageAccountsOpen, setNewAccountName, setIsFormDialogOpen,
         setIsDeleteDialogOpen, setFormData, setTrendPeriod, setTrendDateRange,
