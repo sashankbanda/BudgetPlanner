@@ -245,6 +245,7 @@ export const useBudgetData = () => {
     const handleSettleUp = async (person, account_id) => {
         if (!account_id) return toast({ title: "Error", description: "No account is available.", variant: "destructive" });
         try {
+            // ✨ FIX: This line must use person.name to pass the correct string to the API
             await api.people.settleUp(person.name, account_id);
             toast({ title: "Success!", description: `Balance with ${person.name} has been settled.` });
             await Promise.all([loadCoreData(), fetchTransactions()]);

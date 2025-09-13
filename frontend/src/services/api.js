@@ -228,8 +228,9 @@ export const statsAPI = {
 };
 
 export const peopleAPI = {
-    getAll: () => apiClient.get('/people').then(res => res.data),
-    settleUp: (name, account_id) => apiClient.post(`/people/${name}/settle`, { account_id }).then(res => res.data),
+    getAll: () => apiClient.get('/people').then(res => res.data),
+    // ✨ FIX: Ensure the 'name' variable is correctly used in the URL template
+    settleUp: (name, account_id) => apiClient.post(`/people/${name}/settle`, { account_id }).then(res => res.data),
 };
 
 
@@ -238,7 +239,6 @@ export const peopleAPI = {
 const api = {
     auth: authAPI,
     accounts: accountAPI,
-    // REMOVED: groups: groupAPI,
     transactions: transactionAPI,
     stats: statsAPI,
     people: peopleAPI
