@@ -9,6 +9,7 @@ import DashboardHeader from '../components/dashboard/DashboardHeader';
 import StatCards from '../components/dashboard/StatCards';
 import DashboardTabs from '../components/dashboard/DashboardTabs';
 import Welcome from '../components/dashboard/Welcome';
+import SplitDetailsDialog from '../components/dashboard/SplitDetailsDialog'; // ✨ ADDED
 
 const BudgetDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview');
@@ -17,6 +18,7 @@ const BudgetDashboard = () => {
     const [isDeletingGroupOpen, setIsDeletingGroupOpen] = useState(false);
     const [deletingGroupId, setDeletingGroupId] = useState(null);
     const [isDeleteAccountConfirmOpen, setIsDeleteAccountConfirmOpen] = useState(false);
+    const [viewingSplit, setViewingSplit] = useState(null); // ✨ ADDED
 
     const budgetData = useBudgetData();
     
@@ -98,9 +100,10 @@ const BudgetDashboard = () => {
                             activeTab={activeTab}
                             setActiveTab={setActiveTab}
                             onSettleUpClick={onSettleUpClick}
-                            loading={budgetData.isTransactionLoading} 
-                            onDeleteGroupClick={onDeleteGroupClick}
-                            {...budgetData}
+                            loading={budgetData.isTransactionLoading} 
+                            onDeleteGroupClick={onDeleteGroupClick}
+                            onViewSplitDetails={(split) => setViewingSplit(split)} // ✨ ADDED
+                            {...budgetData}
                         />
                     </>
                 )}
@@ -173,6 +176,14 @@ const BudgetDashboard = () => {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+            <SplitDetailsDialog
+                isOpen={!!viewingSplit}
+                onOpenChange={() => setViewingSplit(null)}
+                split={viewingSplit}
+                transactions={budgetData.transactions}
+                onSettle={budgetData.handleSettleSplit}
+                accounts={budgetData.accounts}
+            />
         </div>
     );
 };

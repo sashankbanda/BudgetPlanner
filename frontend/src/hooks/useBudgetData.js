@@ -19,7 +19,7 @@ export const useBudgetData = () => {
     
     const [groups, setGroups] = useState([]);
     const [groupStats, setGroupStats] = useState([]);
-
+    
     const [loading, setLoading] = useState(true);
     const [isTransactionLoading, setIsTransactionLoading] = useState(true);
     const [trendPeriod, setTrendPeriod] = useState('weekly'); // <<< It's still here
@@ -89,7 +89,7 @@ export const useBudgetData = () => {
 
             const [
                 accountsData, dashboardStats, incomeStats, expenseStats, 
-                trendStats, peopleData, peopleStatsData
+                trendStats, peopleData, peopleStatsData, splitGroupsData // ✨ MODIFIED
             ] = await Promise.all([
                 api.accounts.getAll(),
                 api.stats.getDashboardStats(selectedAccountId),
@@ -98,6 +98,7 @@ export const useBudgetData = () => {
                 api.stats.getGranularTrendStats(trendParams),
                 api.people.getAll(),
                 api.stats.getPeopleStats(selectedAccountId),
+                api.stats.getSplits(selectedAccountId) // ✨ MODIFIED
             ]);
 
             setAccounts(accountsData);
@@ -105,7 +106,7 @@ export const useBudgetData = () => {
             setPeopleStats(peopleStatsData);
             setStats({ totalIncome: dashboardStats.total_income || 0, totalExpenses: dashboardStats.total_expenses || 0, balance: dashboardStats.balance || 0, transactionCount: dashboardStats.transaction_count || 0 });
             setChartData({ incomeData: incomeStats, expenseData: expenseStats, trendData: trendStats });
-
+            setGroupStats(splitGroupsData); // ✨ MODIFIED
             if (!formData.account_id && accountsData.length > 0) {
                 setFormData(prev => ({ ...prev, account_id: accountsData[0].id }));
             }
@@ -126,6 +127,33 @@ export const useBudgetData = () => {
         fetchTransactions();
     }, [loading, fetchTransactions]);
 
+    const handleSettleSplit = async (splitTransaction, personName, accountId) => {
+        if (!accountId) {
+            return toast({ title: "Error", description: "Please select an account to settle into.", variant: "destructive" });
+        }
+        
+        const numParticipants = (splitTransaction.split_with.length || 0) + 1;
+        const shareAmount = parseFloat((splitTransaction.amount / numParticipants).toFixed(2));
+
+        const settlementData = {
+            type: 'income',
+            category: 'Settlement',
+            amount: shareAmount,
+            description: `Settled up for "${splitTransaction.group_name || 'Group Expense'}"`,
+            date: new Date().toISOString().split('T')[0],
+            person: personName,
+            account_id: accountId,
+        };
+
+        try {
+            await api.transactions.create(settlementData);
+            toast({ title: "Success!", description: `${personName} has settled their share.` });
+            await Promise.all([loadCoreData(), fetchTransactions()]);
+        } catch (error) {
+            toast({ title: "Error", description: `Could not process settlement. ${error.message}`, variant: "destructive" });
+        }
+    };
+
     const handleCreateAccount = async (name) => {
         const accountName = name || newAccountName;
         if (!accountName.trim()) {
@@ -141,6 +169,7 @@ export const useBudgetData = () => {
             toast({ title: "Error", description: "Failed to create account.", variant: "destructive" });
         }
     };
+
 
     const handleDeleteAccount = async (accountId) => {
         try {
@@ -304,6 +333,7 @@ export const useBudgetData = () => {
         handleFormSubmit, handleEditClick, handleDeleteClick, handleDeleteConfirm,
         handleFilterChange,
         handleDeleteUserAccount,
+        handleSettleSplit,
 
         uniqueCategories, filteredTotals, isFilterActive,
     };

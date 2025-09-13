@@ -12,20 +12,21 @@ import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
 import { cn } from '../../lib/utils';
 import CreateGroupDialog from './CreateGroupDialog';
-import EditGroupDialog from './EditGroupDialog';
+import EditGroupDialog from './EditGroupDialog'; // This can now be removed or repurposed later
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 
 const COLORS = { income: '#00ff88', expense: '#ff4757', electric: '#00bfff' };
 const pieColors = ['#00ff88', '#ff4757', '#00bfff', '#ffa502', '#2ed573', '#ff6348', '#70a1ff'];
 
 const DashboardTabs = ({
-    // ✨ FIX: Added the 'people' prop here to make it available to the component
-    activeTab, setActiveTab, chartData, peopleStats, groupStats, people,
-    transactions, loading, handleEditClick, handleDeleteClick,
-    filters, handleFilterChange, uniqueCategories, isFilterActive, filteredTotals,
-    trendPeriod, setTrendPeriod, trendDateRange, setTrendDateRange,
-    onSettleUpClick, handleCreateGroup, groups,
-    handleUpdateGroup, onDeleteGroupClick
+    activeTab, setActiveTab, chartData, peopleStats, groupStats, people,
+    transactions, loading, handleEditClick, handleDeleteClick,
+    filters, handleFilterChange, uniqueCategories, isFilterActive, filteredTotals,
+    trendPeriod, setTrendPeriod, trendDateRange, setTrendDateRange,
+    onSettleUpClick, 
+    onViewSplitDetails, // ✨ ADDED
+    // The group handlers below are now obsolete and can be removed
+    handleCreateGroup, groups, handleUpdateGroup, onDeleteGroupClick
 }) => {
 
     const [selectMode, setSelectMode] = useState(false);
@@ -188,61 +189,40 @@ const DashboardTabs = ({
                 
                 {/* Groups Tab */}
                 <TabsContent value="groups">
-                     <Card className="glass-card">
-                         <CardHeader>
-                             <CardTitle className="electric-accent">Groups Summary</CardTitle>
-                         </CardHeader>
-                         <CardContent className="space-y-4">
-                             {groupStats.length === 0 ? (
-                                 <div className="text-center py-8"><p className="text-gray-400">You haven't created any groups yet.</p></div>
-                             ) : (
-                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                     {groupStats.map((group) => (
-                                         <Card key={group.id} className="glass-effect p-4 flex flex-col justify-between relative">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7 text-gray-400 hover:text-white">
-                                                        <MoreVertical className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end" className="glass-effect border-0 text-white">
-                                                    <DropdownMenuItem onSelect={() => { setEditingGroup(group); setIsEditGroupOpen(true); }}>
-                                                        Edit Group
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onSelect={() => onDeleteGroupClick(group.id)} className="text-red-400 focus:bg-red-900/50 focus:text-red-300">
-                                                        Delete Group
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-
-                                             <div>
-                                                <div className="mb-2">
-                                                    <CardTitle className="text-xl electric-accent flex items-center gap-2 mr-8"><Users2 className="w-5 h-5" /> {group.name}</CardTitle>
-                                                    <p className="text-xs text-gray-400">{group.members.length} member(s) • {group.transaction_count} transaction(s)</p>
+                     <Card className="glass-card">
+                         <CardHeader>
+                             <CardTitle className="electric-accent">Split Expense Summary</CardTitle>
+                         </CardHeader>
+                         <CardContent className="space-y-4">
+                             {groupStats.length === 0 ? (
+                                 <div className="text-center py-8"><p className="text-gray-400">No split expenses found.</p></div>
+                             ) : (
+                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                     {groupStats.map((split) => (
+                                         <Card key={split.id} className="glass-effect p-4 flex flex-col justify-between">
+                                             <div>
+                                                <div className="mb-2">
+                                                    <CardTitle className="text-xl electric-accent flex items-center gap-2"><Users2 className="w-5 h-5" /> {split.group_name}</CardTitle>
+                                                    <p className="text-xs text-gray-400">{split.date} • {split.split_with.length + 1} people</p>
+                                                </div>
+                                                <div className="mb-4">
+                                                    <p className="text-gray-300">{split.description}</p>
+                                                </div>
+                                             </div>
+                                             <div className="border-t border-white/10 mt-auto pt-4 space-y-3">
+                                                <div className="flex justify-between items-center font-bold">
+                                                    <span className="text-gray-300">Total Bill:</span>
+                                                    <span className="expense-accent">-${split.amount.toFixed(2)}</span>
                                                 </div>
-                                                <div className="mb-4">
-                                                    <Label className="text-xs text-gray-500">Members</Label>
-                                                    <div className="flex flex-wrap gap-1 mt-1">
-                                                        {group.members.map(member => (
-                                                            <Badge key={member} variant="secondary" className="font-normal bg-gray-700/50 text-gray-300">{member}</Badge>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                             </div>
-                                             <div className="border-t border-white/10 mt-auto pt-4">
-                                                 <div className="flex justify-between items-center font-bold">
-                                                     <span className="text-gray-300">Your Net Balance:</span>
-                                                     <span className={group.net_balance >= 0 ? 'income-accent' : 'expense-accent'}>{group.net_balance >= 0 ? `+${group.net_balance.toFixed(2)}` : `${group.net_balance.toFixed(2)}`}</span>
-                                                 </div>
-                                                 <p className="text-xs text-center text-gray-500 mt-1">{group.net_balance > 0 ? `The group owes you.` : group.net_balance < 0 ? `You owe the group.` : 'You are settled up.'}</p>
-                                             </div>
-                                         </Card>
-                                     ))}
-                                 </div>
-                             )}
-                         </CardContent>
-                     </Card>
-                 </TabsContent>
+                                                    <Button className="w-full glass-button neon-glow" onClick={() => onViewSplitDetails(split)}>View Details</Button>
+                                             </div>
+                                         </Card>
+                                     ))}
+                                 </div>
+                             )}
+                         </CardContent>
+                     </Card>
+                 </TabsContent>
 
                 {/* Trends and Transactions Tabs */}
                 <TabsContent value="trends">
