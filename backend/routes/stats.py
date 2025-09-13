@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 from typing import List, Literal, Optional
 from models.transaction import MonthlyStats, CategoryStats, TrendStats, PersonStats, GranularTrendStats
-from models.group import GroupSummary 
+# REMOVED: from models.group import GroupSummary
 from database import get_database
 from datetime import datetime, date, timedelta
 from auth import get_current_user_id
@@ -38,68 +38,11 @@ async def get_transaction_date_range(
     last_date = last_result[0]['date'] if last_result else None
     return DateRange(first_transaction_date=first_date, last_transaction_date=last_date)
 
-# ✨ ADD THIS NEW ENDPOINT AT THE TOP ✨
-@router.get("/groups", response_model=List[GroupSummary])
-async def get_groups_summary_stats(
-    user_id: str = Depends(get_current_user_id),
-    db: AsyncIOMotorDatabase = Depends(get_database),
-    account_id: Optional[str] = Query(None)
-):
-    """
-    Retrieves all groups for a user and calculates their net balance
-    based on associated transactions.
-    """
-    # Step 1: Get all groups for the user
-    groups_cursor = db.groups.find({"user_id": user_id}).sort("name", 1)
-    groups = await groups_cursor.to_list(length=None)
-    group_ids = [g["id"] for g in groups]
-
-    # Step 2: Build the aggregation pipeline for transactions
-    match_query = {
-        "user_id": user_id,
-        "group_id": {"$in": group_ids}
-    }
-    if account_id:
-        match_query["account_id"] = account_id
-
-    pipeline = [
-        {"$match": match_query},
-        {"$group": {
-            "_id": "$group_id",
-            "income": {"$sum": {"$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]}},
-            "expense": {"$sum": {"$cond": [{"$eq": ["$type", "expense"]}, "$amount", 0]}},
-            "count": {"$sum": 1}
-        }},
-        {"$project": {
-            "group_id": "$_id",
-            "net_balance": {"$subtract": ["$income", "$expense"]},
-            "transaction_count": "$count",
-            "_id": 0
-        }}
-    ]
-    
-    stats_cursor = db.transactions.aggregate(pipeline)
-    stats_by_group_id = {s["group_id"]: s for s in await stats_cursor.to_list(length=None)}
-
-    # Step 3: Combine group info with calculated stats
-    summaries = []
-    for group in groups:
-        stats = stats_by_group_id.get(group["id"], {})
-        summaries.append(GroupSummary(
-            id=group["id"],
-            name=group["name"],
-            members=group["members"],
-            net_balance=stats.get("net_balance", 0.0),
-            transaction_count=stats.get("transaction_count", 0)
-        ))
-        
-    return summaries
-
-
-# --- REST OF THE FILE REMAINS THE SAME ---
+# THE /groups ENDPOINT HAS BEEN REMOVED FROM HERE
 
 @router.get("/trends_granular", response_model=List[GranularTrendStats])
 async def get_granular_trend_stats(
+    # ... (code for this function remains the same)
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database),
     account_id: Optional[str] = Query(None),
@@ -154,6 +97,7 @@ async def get_granular_trend_stats(
 
 @router.get("/monthly", response_model=List[MonthlyStats])
 async def get_monthly_stats(
+    # ... (code for this function remains the same)
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database),
     account_id: Optional[str] = Query(None)
@@ -173,6 +117,7 @@ async def get_monthly_stats(
 
 @router.get("/categories", response_model=List[CategoryStats])
 async def get_category_stats(
+    # ... (code for this function remains the same)
     type: Literal["income", "expense"],
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database),
@@ -193,6 +138,7 @@ async def get_category_stats(
 
 @router.get("/dashboard")
 async def get_dashboard_stats(
+    # ... (code for this function remains the same)
     user_id: str = Depends(get_current_user_id),
     db: AsyncIOMotorDatabase = Depends(get_database),
     account_id: Optional[str] = Query(None)
@@ -226,30 +172,71 @@ async def get_people_stats(
     db: AsyncIOMotorDatabase = Depends(get_database),
     account_id: Optional[str] = Query(None)
 ):
-    match_query = {
-        "user_id": user_id,
-        "person": {"$ne": None, "$exists": True}
-    }
+    base_match_query = {"user_id": user_id}
     if account_id:
-        match_query["account_id"] = account_id
+        base_match_query["account_id"] = account_id
 
-    pipeline = [
-        {"$match": match_query},
+    # Pipeline for direct person-to-person transactions
+    direct_pipeline = [
+        {"$match": {**base_match_query, "person": {"$ne": None}}},
         {"$group": {
             "_id": "$person",
             "total_received": {"$sum": {"$cond": [{"$eq": ["$type", "income"]}, "$amount", 0]}},
             "total_given": {"$sum": {"$cond": [{"$eq": ["$type", "expense"]}, "$amount", 0]}},
             "transaction_count": {"$sum": 1}
+        }}
+    ]
+
+    # Pipeline for split expenses
+    split_pipeline = [
+        {"$match": {**base_match_query, "split_with": {"$ne": None, "$not": {"$size": 0}}}},
+        {"$project": {
+            "amount": "$amount",
+            "split_with": "$split_with",
+            "num_participants": {"$add": [{"$size": "$split_with"}, 1]}
         }},
         {"$project": {
-            "name": "$_id",
-            "total_received": "$total_received",
-            "total_given": "$total_given",
-            "net_balance": {"$subtract": ["$total_received", "$total_given"]},
-            "transaction_count": "$transaction_count",
-            "_id": 0
+            "share": {"$divide": ["$amount", "$num_participants"]},
+            "split_with": "$split_with"
         }},
-        {"$sort": {"name": 1}}
+        {"$unwind": "$split_with"},
+        {"$group": {
+            "_id": "$split_with",
+            "total_given": {"$sum": "$share"}, # From user's perspective, they "gave" this share to the person
+            "transaction_count": {"$sum": 1}
+        }}
     ]
-    cursor = db.transactions.aggregate(pipeline)
-    return [PersonStats(**r) for r in await cursor.to_list(length=None)]
+    
+    direct_results = await db.transactions.aggregate(direct_pipeline).to_list(length=None)
+    split_results = await db.transactions.aggregate(split_pipeline).to_list(length=None)
+
+    # Combine results in Python
+    combined_stats = {}
+    for item in direct_results:
+        person = item["_id"]
+        if person not in combined_stats:
+            combined_stats[person] = {"total_given": 0, "total_received": 0, "transaction_count": 0}
+        combined_stats[person]["total_given"] += item.get("total_given", 0)
+        combined_stats[person]["total_received"] += item.get("total_received", 0)
+        combined_stats[person]["transaction_count"] += item.get("transaction_count", 0)
+
+    for item in split_results:
+        person = item["_id"]
+        if person not in combined_stats:
+            combined_stats[person] = {"total_given": 0, "total_received": 0, "transaction_count": 0}
+        # A split expense means the other person owes you money, which is like "giving" them credit.
+        # This increases the amount they owe you, effectively a "given" amount in the net balance calculation.
+        combined_stats[person]["total_received"] += item.get("total_given", 0) # Note: from the user's POV, this is money to be received
+        combined_stats[person]["transaction_count"] += item.get("transaction_count", 0)
+
+    final_list = [
+        PersonStats(
+            name=name,
+            total_given=stats["total_given"],
+            total_received=stats["total_received"],
+            net_balance=stats["total_received"] - stats["total_given"],
+            transaction_count=stats["transaction_count"]
+        ) for name, stats in combined_stats.items()
+    ]
+
+    return sorted(final_list, key=lambda x: x.name)
