@@ -1,5 +1,3 @@
-// frontend/src/hooks/useBudgetData.js
-
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from './use-toast';
@@ -11,7 +9,6 @@ import { useDebounce } from './useDebounce';
 const personCategories = ["To Friends", "From Friends", "To Parents", "From Parents"];
 
 export const useBudgetData = () => {
-    // --- STATE MANAGEMENT ---
     const [transactions, setTransactions] = useState([]);
     const [people, setPeople] = useState([]);
     const [stats, setStats] = useState({ totalIncome: 0, totalExpenses: 0, balance: 0, transactionCount: 0 });
@@ -23,15 +20,11 @@ export const useBudgetData = () => {
     const [groups, setGroups] = useState([]);
     const [groupStats, setGroupStats] = useState([]);
 
-    // Loading states
     const [loading, setLoading] = useState(true);
     const [isTransactionLoading, setIsTransactionLoading] = useState(true);
-
-    // Trend controls state
-    const [trendPeriod, setTrendPeriod] = useState('weekly');
+    const [trendPeriod, setTrendPeriod] = useState('weekly'); // <<< It's still here
     const [trendDateRange, setTrendDateRange] = useState({ from: subDays(new Date(), 29), to: new Date() });
 
-    // Dialog and Form states
     const [isManageAccountsOpen, setIsManageAccountsOpen] = useState(false);
     const [newAccountName, setNewAccountName] = useState("");
     const [isFormDialogOpen, setIsFormDialogOpen] = useState(false);
@@ -42,18 +35,32 @@ export const useBudgetData = () => {
         type: 'expense', category: '', amount: '', description: '',
         date: new Date().toISOString().split('T')[0], customCategory: '',
         person: '', newPerson: '', account_id: '',
-        transaction_with: 'person', 
-        group_id: ''
+        group_name: '',
+        split_with: []
     });
 
-    // Filtering states
     const [filters, setFilters] = useState({ search: '', type: '', category: '', sort: 'date_desc' });
     const debouncedSearchTerm = useDebounce(filters.search, 300);
 
     const { toast } = useToast();
     const navigate = useNavigate();
 
-    // --- DATA FETCHING LOGIC ---
+    useEffect(() => {
+        const setInitialDateRange = async () => {
+            try {
+                const range = await api.stats.getDateRange();
+                if (range.first_transaction_date && range.last_transaction_date) {
+                    setTrendDateRange({
+                        from: new Date(range.first_transaction_date + 'T00:00:00'),
+                        to: new Date(range.last_transaction_date + 'T00:00:00')
+                    });
+                }
+            } catch (error) {
+                console.error("Failed to fetch initial date range:", error);
+            }
+        };
+        setInitialDateRange();
+    }, []);
 
     const fetchTransactions = useCallback(async () => {
         setIsTransactionLoading(true);
@@ -82,7 +89,7 @@ export const useBudgetData = () => {
 
             const [
                 accountsData, dashboardStats, incomeStats, expenseStats, 
-                trendStats, peopleData, peopleStatsData, groupsData, groupStatsData
+                trendStats, peopleData, peopleStatsData
             ] = await Promise.all([
                 api.accounts.getAll(),
                 api.stats.getDashboardStats(selectedAccountId),
@@ -91,15 +98,11 @@ export const useBudgetData = () => {
                 api.stats.getGranularTrendStats(trendParams),
                 api.people.getAll(),
                 api.stats.getPeopleStats(selectedAccountId),
-                api.groups.getAll(),
-                api.stats.getGroupsSummaryStats(selectedAccountId)
             ]);
 
             setAccounts(accountsData);
             setPeople(peopleData);
             setPeopleStats(peopleStatsData);
-            setGroups(groupsData);
-            setGroupStats(groupStatsData);
             setStats({ totalIncome: dashboardStats.total_income || 0, totalExpenses: dashboardStats.total_expenses || 0, balance: dashboardStats.balance || 0, transactionCount: dashboardStats.transaction_count || 0 });
             setChartData({ incomeData: incomeStats, expenseData: expenseStats, trendData: trendStats });
 
@@ -112,7 +115,7 @@ export const useBudgetData = () => {
         } finally {
             setLoading(false);
         }
-    }, [selectedAccountId, trendPeriod, trendDateRange.from, trendDateRange.to, toast, accounts.length, formData.account_id]);
+    }, [selectedAccountId, trendPeriod, trendDateRange, toast, accounts.length, formData.account_id]);
 
     useEffect(() => {
         loadCoreData();
@@ -122,54 +125,6 @@ export const useBudgetData = () => {
         if (loading) return;
         fetchTransactions();
     }, [loading, fetchTransactions]);
-
-    useEffect(() => {
-        const setInitialDateRange = async () => {
-            try {
-                const range = await api.stats.getDateRange();
-                if (range.first_transaction_date && range.last_transaction_date) {
-                    setTrendDateRange({
-                        from: new Date(range.first_transaction_date + 'T00:00:00'),
-                        to: new Date(range.last_transaction_date + 'T00:00:00')
-                    });
-                }
-            } catch (error) {
-                console.error("Failed to fetch initial date range:", error);
-            }
-        };
-        setInitialDateRange();
-    }, []); // Empty dependency array ensures this runs only once on mount
-
-    // --- HANDLERS ---
-    const handleCreateGroup = async (groupData) => {
-        try {
-            await api.groups.create(groupData);
-            toast({ title: "Success!", description: `Group '${groupData.name}' has been created.` });
-            await Promise.all([loadCoreData(), fetchTransactions()]);
-        } catch (error) {
-            toast({ title: "Error", description: `Failed to create group: ${error.message}`, variant: "destructive" });
-        }
-    };
-    
-    const handleUpdateGroup = async (groupId, groupData) => {
-        try {
-            await api.groups.update(groupId, groupData);
-            toast({ title: "Success!", description: `Group '${groupData.name}' has been updated.` });
-            await Promise.all([loadCoreData(), fetchTransactions()]);
-        } catch (error) {
-            toast({ title: "Error", description: `Failed to update group: ${error.message}`, variant: "destructive" });
-        }
-    };
-
-    const handleDeleteGroup = async (groupId) => {
-        try {
-            await api.groups.delete(groupId);
-            toast({ title: "Success!", description: "Group has been deleted." });
-            await Promise.all([loadCoreData(), fetchTransactions()]);
-        } catch (error) {
-            toast({ title: "Error", description: `Failed to delete group: ${error.message}`, variant: "destructive" });
-        }
-    };
 
     const handleCreateAccount = async (name) => {
         const accountName = name || newAccountName;
@@ -204,17 +159,17 @@ export const useBudgetData = () => {
         if (!formData.amount || !finalCategory) return toast({ title: "Validation Error", description: "Amount and Category are required.", variant: "destructive" });
         
         let personValue = null;
-        if (formData.transaction_with === 'person') {
-            if (formData.person === 'add_new') {
-                if (!formData.newPerson || !formData.newPerson.trim()) {
-                    toast({ title: "Validation Error", description: "New Person Name cannot be empty.", variant: "destructive" });
-                    return;
-                }
-                personValue = formData.newPerson.trim();
-            } else {
-                personValue = formData.person;
+        if (formData.person === 'add_new') {
+            if (!formData.newPerson || !formData.newPerson.trim()) {
+                toast({ title: "Validation Error", description: "New Person Name cannot be empty.", variant: "destructive" });
+                return;
             }
+            personValue = formData.newPerson.trim();
+        } else {
+            personValue = formData.person;
         }
+
+        const isSplit = formData.split_with && formData.split_with.length > 0;
 
         const transactionData = {
             type: formData.type,
@@ -223,8 +178,9 @@ export const useBudgetData = () => {
             description: formData.description,
             date: formData.date,
             account_id: formData.account_id,
-            person: personValue,
-            group_id: formData.transaction_with === 'group' ? formData.group_id : null,
+            person: isSplit ? null : personValue,
+            group_name: isSplit ? (formData.group_name.trim() || 'Group Expense') : null,
+            split_with: isSplit ? formData.split_with : null,
         };
 
         try {
@@ -291,8 +247,8 @@ export const useBudgetData = () => {
             date: new Date().toISOString().split('T')[0], customCategory: '',
             person: '', newPerson: '', 
             account_id: selectedAccountId !== 'all' ? selectedAccountId : (accounts.length > 0 ? accounts[0].id : ''),
-            transaction_with: 'person',
-            group_id: ''
+            group_name: '',
+            split_with: []
         });
         setEditingTransaction(null);
     }, [accounts, selectedAccountId]);
@@ -313,8 +269,8 @@ export const useBudgetData = () => {
             person: transaction.person || '',
             newPerson: '',
             account_id: transaction.account_id,
-            transaction_with: transaction.group_id ? 'group' : 'person',
-            group_id: transaction.group_id || ''
+            group_name: transaction.group_name || '',
+            split_with: transaction.split_with || []
         });
         setIsFormDialogOpen(true);
     };
@@ -347,9 +303,6 @@ export const useBudgetData = () => {
         handleSettleUp, handleLogout, handleCreateAccount, handleDeleteAccount, resetForm,
         handleFormSubmit, handleEditClick, handleDeleteClick, handleDeleteConfirm,
         handleFilterChange,
-        handleCreateGroup, 
-        handleUpdateGroup, 
-        handleDeleteGroup,
         handleDeleteUserAccount,
 
         uniqueCategories, filteredTotals, isFilterActive,

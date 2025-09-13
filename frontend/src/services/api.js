@@ -229,13 +229,15 @@ export const peopleAPI = {
 };
 
 
+// ✨ The groupAPI has been removed from this file.
+
 const api = {
-    auth: authAPI,
-    accounts: accountAPI,
-    groups: groupAPI, // ✨ ADDED
-    transactions: transactionAPI,
-    stats: statsAPI,
-    people: peopleAPI
+    auth: authAPI,
+    accounts: accountAPI,
+    // REMOVED: groups: groupAPI,
+    transactions: transactionAPI,
+    stats: statsAPI,
+    people: peopleAPI
 };
 
 export default api;
