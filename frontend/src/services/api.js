@@ -151,6 +151,16 @@ export const authAPI = {
             handleApiError(error);
         }
     },
+    // ADD THIS NEW FUNCTION
+    deleteAccount: async () => {
+        try {
+            const response = await apiClient.delete('/users/me');
+            authAPI.logout(); // Clear tokens after successful deletion
+            return response.data;
+        } catch (error) {
+            handleApiError(error);
+        }
+    },
 };
 
 
@@ -207,9 +217,10 @@ export const statsAPI = {
     },
     // ✨ ADDED getGroupsSummaryStats ✨
     getGroupsSummaryStats: (accountId) => {
-        const params = accountId && accountId !== 'all' ? { account_id: accountId } : {};
-        return apiClient.get('/stats/groups', { params }).then(res => res.data);
-    },
+        const params = accountId && accountId !== 'all' ? { account_id: accountId } : {};
+        return apiClient.get('/stats/groups', { params }).then(res => res.data);
+    },
+    getDateRange: () => apiClient.get('/stats/date-range').then(res => res.data),
 };
 
 export const peopleAPI = {

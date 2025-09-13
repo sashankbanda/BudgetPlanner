@@ -1,0 +1,84 @@
+[33m512c7d0[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeat/deploy-settings[m[33m, [m[1;31morigin/feat/deploy-settings[m[33m)[m final fix v1
+[33madffea0[m fixed issue again uses the <ScrollArea> component to make only the form fields scrollable
+[33mf7c57af[m undo to original
+[33m7bd44d9[m uses the <ScrollArea> component to make only the form fields scrollable
+[33m006d59c[m fixed transaction modal to look great and function perfectly on any screen size.
+[33m7160d0e[m fixed handle adding new people to transactions.
+[33m7b74a5f[m pass the groups data into the transaction form & style the radio buttons at the same time.
+[33m657d99d[m[33m ([m[1;32mmain[m[33m)[m add the update and delete functions for groups
+[33m165b520[m add the update and delete functions for groups
+[33mf024a87[m add the update and delete functions for groups
+[33m55c485c[m added both the member list and the transaction count to the group cards
+[33mea438cb[m Implementing the group feature frontend
+[33m6c0551a[m fixed new1 alignment & duplication
+[33md7331b3[m fixed alignment & duplication
+[33m5a0bb43[m fixed alignment
+[33m98bd2c6[m changed calender
+[33maa5bbab[m fixed edit and delete button
+[33m41fa715[m fixed search reloading issue
+[33md5d1af8[m fixed add account
+[33me8ec6d5[m added a new feature to allow users to resend the verification email if they don't receive the first one.
+[33m513e100[m Added verification mail feat
+[33m8434e25[m changed videoId
+[33m10bda58[m Added add a small, easily recognizable Help icon
+[33mc7e885d[m Added gives users a real-time checklist for creating a strong password.
+[33mda9a46f[m Added logout option in Welcome page
+[33mfcbd7ec[m calendar logo color
+[33m531aea4[m backed to normal
+[33me0f7a68[m backed to normal
+[33m12fe65f[m fixed Responsive container
+[33m046d525[m fixed Responsive container
+[33ma1994f0[m fixed Responsive container
+[33m51fe3f3[m fixed Responsive container
+[33m27ce779[m fixed Responsive container
+[33m3351a4d[m fixed Responsive container
+[33mb7de901[m fixed Responsive container
+[33m4c69ce3[m fixed Responsive container
+[33mc996807[m fixed Responsive container
+[33m12673ed[m fixed Responsive container
+[33m9008496[m fixed Responsive container
+[33mc76d735[m fixed search (enter+500ms)
+[33m91cc75b[m fixed search (enter+500ms)
+[33ma2cc06a[m fixed search feat
+[33mf808bb1[m fixed search feat
+[33ma586a60[m fixed search feat
+[33mb144203[m fixed color of New Password
+[33m845a662[m fixed issues forget password
+[33m07e3289[m fixed issues forget password
+[33m596940d[m fixed more issues google login
+[33mb5d6bb1[m fixed issues google login
+[33m117146d[m fixed issues after login
+[33m23bb379[m fixed issues
+[33m0e39825[m fixed No routes matched location /auth/callback
+[33m6d0e3b4[m Sign in with google
+[33m86d1686[m feat: Add jwt-decode and update dependencies
+[33mea135ae[m Added new feat in Login Page
+[33mb0b952b[m Added new feat in Login Page
+[33m40f6e14[m Added new feat in Login Page
+[33m06f56bf[m fixed responsive design issues
+[33m3923afd[m watermark location
+[33m375e62c[m feat(people): Implement settle up functionality
+[33mdb601ec[m feat(dashboard): Implement interactive charts and refactor UI
+[33mf644615[m updated
+[33m062f551[m refactored
+[33m2c0890b[m refactor(dashboard): Decompose BudgetDashboard into modular components
+[33m648dfbf[m chore: Stop tracking local-only components
+[33m2f50035[m The changes are located within the TabsContent for transactions
+[33m90a7783[m All Categories Option,Dynamic Filter Summary Bar,Efficient Calculations
+[33m6e3a13c[m changes are the addition of a new useEffect hook and a slight modification to the list of personCategories
+[33mf102322[m feat(frontend): Add multi-account management and filtering
+[33m045fcd6[m feat(app): Add transaction CRUD and People summary page
+[33ma24e684[m fix(frontend): Correct API service and dashboard dropdown bug
+[33md1e16ae[m feat(dashboard): Add 'People' tab for balance summaries
+[33m97459da[m feat(dashboard): Add edit and delete functionality for transactions
+[33m9821f89[m feat(dashboard): Switch to /dashboard endpoint for correct stats display
+[33m6ddad9c[m reaload problem solved
+[33m803d3dc[m allowed origins added https://allocash.netlify.app
+[33mfdecfb7[m http://localhost:8000 to https://budgetplannerbackend.onrender.com
+[33m0c4c01f[m feat: Add person association and transaction filtering
+[33mdebdcbe[m[33m ([m[1;31morigin/feat/user-authentication[m[33m, [m[1;32mfeat/user-authentication[m[33m)[m Responsive on different screen sizes
+[33mc0cad1b[m added watermark
+[33m238b056[m email & password color changed
+[33maca7074[m feat: Implement user authentication and multi-tenancy
+[33mcc5e92e[m updated urls to run on local machine
+[33mc12a6d1[m Initial commit: BudgetPlanner full project

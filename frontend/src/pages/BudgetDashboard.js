@@ -1,6 +1,9 @@
+// frontend/src/pages/BudgetDashboard.js
+
 import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '../components/ui/alert-dialog';
+import { Button } from '../components/ui/button';
 import { useBudgetData } from '../hooks/useBudgetData';
 import DashboardHeader from '../components/dashboard/DashboardHeader';
 import StatCards from '../components/dashboard/StatCards';
@@ -11,9 +14,9 @@ const BudgetDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview');
     const [isSettleUpOpen, setIsSettleUpOpen] = useState(false);
     const [settlingPerson, setSettlingPerson] = useState(null);
-    // ✨ ADDED: State for group deletion confirmation ✨
     const [isDeletingGroupOpen, setIsDeletingGroupOpen] = useState(false);
     const [deletingGroupId, setDeletingGroupId] = useState(null);
+    const [isDeleteAccountConfirmOpen, setIsDeleteAccountConfirmOpen] = useState(false);
 
     const budgetData = useBudgetData();
     
@@ -38,6 +41,11 @@ const BudgetDashboard = () => {
         setIsCreatingFirstAccount(false);
     };
 
+    const handleDeleteAccountFinal = async () => {
+        await budgetData.handleDeleteUserAccount();
+        setIsDeleteAccountConfirmOpen(false);
+    };
+
     if (budgetData.loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white flex items-center justify-center">
@@ -57,7 +65,6 @@ const BudgetDashboard = () => {
         return `This will create an ${transactionType} of $${amount} to ${action}. Are you sure?`;
     };
 
-    // ✨ ADDED: Handlers for group deletion flow ✨
     const onDeleteGroupClick = (groupId) => {
         setDeletingGroupId(groupId);
         setIsDeletingGroupOpen(true);
@@ -71,8 +78,6 @@ const BudgetDashboard = () => {
         setDeletingGroupId(null);
     };
 
-    if (budgetData.loading) { /* ... existing loading UI ... */ }
-
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white p-4 sm:p-6 md:p-8">
             <div className="max-w-7xl mx-auto">
@@ -84,14 +89,17 @@ const BudgetDashboard = () => {
                     />
                 ) : (
                     <>
-                        <DashboardHeader {...budgetData} />
+                        <DashboardHeader 
+                            {...budgetData} 
+                            onDeleteAccountRequest={() => setIsDeleteAccountConfirmOpen(true)} 
+                        />
                         <StatCards stats={budgetData.stats} />
                         <DashboardTabs
                             activeTab={activeTab}
                             setActiveTab={setActiveTab}
                             onSettleUpClick={onSettleUpClick}
-                            // MODIFIED: Pass the new transaction-specific loading state here
                             loading={budgetData.isTransactionLoading} 
+                            onDeleteGroupClick={onDeleteGroupClick}
                             {...budgetData}
                         />
                     </>
@@ -99,25 +107,27 @@ const BudgetDashboard = () => {
             </div>
 
             <AlertDialog open={budgetData.isDeleteDialogOpen} onOpenChange={budgetData.setIsDeleteDialogOpen}>
-               <AlertDialogContent className="glass-card text-white border-0">
-                   <AlertDialogHeader>
-                       <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                       <AlertDialogDescription className="text-gray-400">
-                           This action cannot be undone. This will permanently delete the transaction.
-                       </AlertDialogDescription>
-                   </AlertDialogHeader>
-                   <AlertDialogFooter>
-                       <AlertDialogCancel className="glass-button">Cancel</AlertDialogCancel>
-                       <AlertDialogAction className="glass-button expense-glow" onClick={budgetData.handleDeleteConfirm}>Delete</AlertDialogAction>
-                   </AlertDialogFooter>
-               </AlertDialogContent>
+                <AlertDialogContent className="glass-card text-white border-0">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        {/* ✨ FIX: Added text-center for better layout */}
+                        <AlertDialogDescription className="text-gray-400 text-center"> 
+                            This action cannot be undone. This will permanently delete the transaction.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel className="glass-button">Cancel</AlertDialogCancel>
+                        <AlertDialogAction className="glass-button expense-glow" onClick={budgetData.handleDeleteConfirm}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
             </AlertDialog>
             
             <AlertDialog open={isSettleUpOpen} onOpenChange={setIsSettleUpOpen}>
                 <AlertDialogContent className="glass-card text-white border-0">
                     <AlertDialogHeader>
                         <AlertDialogTitle>Settle Balance with {settlingPerson?.name}?</AlertDialogTitle>
-                        <AlertDialogDescription className="text-gray-400">
+                        {/* ✨ FIX: Added text-center for better layout */}
+                        <AlertDialogDescription className="text-gray-400 text-center">
                            {getSettleUpMessage()}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
@@ -128,18 +138,38 @@ const BudgetDashboard = () => {
                 </AlertDialogContent>
             </AlertDialog>
 
-            {/* ✨ ADDED: Delete Group Confirmation Dialog ✨ */}
             <AlertDialog open={isDeletingGroupOpen} onOpenChange={setIsDeletingGroupOpen}>
                 <AlertDialogContent className="glass-card text-white border-0">
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure you want to delete this group?</AlertDialogTitle>
-                        <AlertDialogDescription className="text-gray-400">
+                        {/* ✨ FIX: Added text-center for better layout */}
+                        <AlertDialogDescription className="text-gray-400 text-center">
                             This action cannot be undone. Transactions associated with this group will be kept but unlinked from the group.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel className="glass-button">Cancel</AlertDialogCancel>
                         <AlertDialogAction className="glass-button expense-glow" onClick={handleDeleteGroupConfirm}>Delete Group</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={isDeleteAccountConfirmOpen} onOpenChange={setIsDeleteAccountConfirmOpen}>
+                <AlertDialogContent className="glass-card text-white border-0">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="expense-accent">Are you absolutely sure?</AlertDialogTitle>
+                        {/* ✨ FIX: Added text-center for better layout */}
+                        <AlertDialogDescription className="text-gray-400 text-center">
+                            This action cannot be undone. This will permanently delete your account and all of your data, including all financial accounts, transactions, and groups.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel asChild>
+                            <Button className="glass-button">Cancel</Button>
+                        </AlertDialogCancel>
+                        <AlertDialogAction asChild>
+                            <Button className="glass-button expense-glow" onClick={handleDeleteAccountFinal}>Yes, Delete My Account</Button>
+                        </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

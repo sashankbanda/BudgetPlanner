@@ -1,45 +1,59 @@
+// frontend/src/components/dashboard/TrendControls.js
+
 import React from 'react';
-import { CalendarIcon } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Label } from '../ui/label';
+import { Input } from '../ui/input';
 import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group';
-import { Calendar } from '../ui/calendar';
 import { format } from 'date-fns';
 
+const formatDateForInput = (date) => {
+    if (!date) return '';
+    try {
+        return format(date, 'yyyy-MM-dd');
+    } catch (error) {
+        return '';
+    }
+};
+
 const TrendControls = ({ trendPeriod, setTrendPeriod, trendDateRange, setTrendDateRange }) => {
+    const handleDateChange = (field, value) => {
+        if (!value) return;
+        const newDate = new Date(value + 'T00:00:00');
+
+        setTrendDateRange(prev => {
+            const newRange = { ...prev, [field]: newDate };
+            if (field === 'from' && newRange.to && newDate > newRange.to) {
+                newRange.to = newDate;
+            }
+            if (field === 'to' && newRange.from && newDate < newRange.from) {
+                newRange.from = newDate;
+            }
+            return newRange;
+        });
+    };
+
     return (
-        <div className="flex flex-wrap items-center justify-end gap-2">
-            <Popover>
-                <PopoverTrigger asChild>
-                    <Button
-                        variant={"outline"}
-                        className="w-full sm:w-[280px] justify-start text-left font-normal glass-button"
-                    >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {trendDateRange?.from ? (
-                            trendDateRange.to ? (
-                                <>
-                                    {format(trendDateRange.from, "LLL dd, y")} - {format(trendDateRange.to, "LLL dd, y")}
-                                </>
-                            ) : (
-                                format(trendDateRange.from, "LLL dd, y")
-                            )
-                        ) : (
-                            <span>Pick a date</span>
-                        )}
-                    </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 glass-effect border-0 text-white" align="end">
-                    <Calendar
-                        initialFocus
-                        mode="range"
-                        defaultMonth={trendDateRange?.from}
-                        selected={trendDateRange}
-                        onSelect={setTrendDateRange}
-                        numberOfMonths={2}
-                    />
-                </PopoverContent>
-            </Popover>
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-4">
+            <div className="flex items-center gap-2">
+                <Label htmlFor="start-date" className="text-sm text-gray-400">From</Label>
+                <Input
+                    id="start-date"
+                    type="date"
+                    className="glass-input w-[150px]"
+                    value={formatDateForInput(trendDateRange.from)}
+                    onChange={(e) => handleDateChange('from', e.target.value)}
+                />
+            </div>
+             <div className="flex items-center gap-2">
+                <Label htmlFor="end-date" className="text-sm text-gray-400">To</Label>
+                <Input
+                    id="end-date"
+                    type="date"
+                    className="glass-input w-[150px]"
+                    value={formatDateForInput(trendDateRange.to)}
+                    onChange={(e) => handleDateChange('to', e.target.value)}
+                />
+            </div>
             <ToggleGroup type="single" value={trendPeriod} onValueChange={(value) => value && setTrendPeriod(value)} className="glass-effect rounded-md">
                 <ToggleGroupItem value="daily" className="glass-button data-[state=on]:electric-glow">Daily</ToggleGroupItem>
                 <ToggleGroupItem value="weekly" className="glass-button data-[state=on]:electric-glow">Weekly</ToggleGroupItem>
