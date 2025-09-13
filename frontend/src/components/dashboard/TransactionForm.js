@@ -1,5 +1,6 @@
+// frontend/src/components/dashboard/TransactionForm.js
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -47,7 +48,7 @@ const TransactionForm = ({
                         Fill in the details below to log a new income or expense.
                     </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 pt-4">
+                <div className="space-y-4 pt-4 max-h-[65vh] overflow-y-auto pr-4">
                     {/* ... Account, Type, and Category Selects ... */}
                     <div>
                         <Label>Account</Label>
@@ -149,11 +150,12 @@ const TransactionForm = ({
                         <Label>Date</Label>
                         <Input className="glass-input" type="date" value={formData.date} onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))} />
                     </div>
-
+                </div>
+                <DialogFooter className="pt-4">
                     <Button onClick={onSubmit} className="w-full glass-button neon-glow">
                         {editingTransaction ? 'Save Changes' : 'Add Transaction'}
                     </Button>
-                </div>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );
