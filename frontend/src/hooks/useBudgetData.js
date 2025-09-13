@@ -123,6 +123,23 @@ export const useBudgetData = () => {
         fetchTransactions();
     }, [loading, fetchTransactions]);
 
+    useEffect(() => {
+        const setInitialDateRange = async () => {
+            try {
+                const range = await api.stats.getDateRange();
+                if (range.first_transaction_date && range.last_transaction_date) {
+                    setTrendDateRange({
+                        from: new Date(range.first_transaction_date + 'T00:00:00'),
+                        to: new Date(range.last_transaction_date + 'T00:00:00')
+                    });
+                }
+            } catch (error) {
+                console.error("Failed to fetch initial date range:", error);
+            }
+        };
+        setInitialDateRange();
+    }, []); // Empty dependency array ensures this runs only once on mount
+
     // --- HANDLERS ---
     const handleCreateGroup = async (groupData) => {
         try {
