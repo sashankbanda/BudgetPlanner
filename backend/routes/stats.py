@@ -1,14 +1,18 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 from typing import List, Literal, Optional
-from models.transaction import MonthlyStats, CategoryStats, TrendStats, PersonStats, GranularTrendStats
-# REMOVED: from models.group import GroupSummary
+# ✨ MODIFIED: Import Transaction model
+from models.transaction import MonthlyStats, CategoryStats, TrendStats, PersonStats, GranularTrendStats, Transaction 
 from database import get_database
 from datetime import datetime, date, timedelta
 from auth import get_current_user_id
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 router = APIRouter(prefix="/stats", tags=["statistics"])
+
+# ✨ ADDED: New model for split summaries
+class SplitSummary(Transaction):
+    pass
 
 class DateRange(BaseModel):
     first_transaction_date: Optional[date] = None
@@ -240,3 +244,22 @@ async def get_people_stats(
     ]
 
     return sorted(final_list, key=lambda x: x.name)
+
+# ✨ ADDED: New endpoint to get all split transactions
+@router.get("/splits", response_model=List[SplitSummary])
+async def get_split_transactions(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    account_id: Optional[str] = Query(None)
+):
+    """Retrieves all transactions that are split expenses."""
+    match_query = {
+        "user_id": user_id,
+        "type": "expense",
+        "split_with": {"$ne": None, "$not": {"$size": 0}}
+    }
+    if account_id:
+        match_query["account_id"] = account_id
+        
+    cursor = db.transactions.find(match_query).sort("date", -1)
+    return [SplitSummary(**doc) for doc in await cursor.to_list(length=None)]
