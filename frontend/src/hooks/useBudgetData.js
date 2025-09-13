@@ -20,7 +20,6 @@ export const useBudgetData = () => {
     const [accounts, setAccounts] = useState([]);
     const [selectedAccountId, setSelectedAccountId] = useState('all');
     
-    // ✨ ADDED: State for groups
     const [groups, setGroups] = useState([]);
     const [groupStats, setGroupStats] = useState([]);
 
@@ -43,8 +42,8 @@ export const useBudgetData = () => {
         type: 'expense', category: '', amount: '', description: '',
         date: new Date().toISOString().split('T')[0], customCategory: '',
         person: '', newPerson: '', account_id: '',
-        transaction_with: 'person', // ✨ ADDED: 'person' or 'group'
-        group_id: '' // ✨ ADDED
+        transaction_with: 'person', 
+        group_id: ''
     });
 
     // Filtering states
@@ -54,7 +53,22 @@ export const useBudgetData = () => {
     const { toast } = useToast();
     const navigate = useNavigate();
 
-    // --- DATA FETCHING LOGIC ---
+    // --- DATA FETCHING LOGIC ---
+
+    const fetchTransactions = useCallback(async () => {
+        setIsTransactionLoading(true);
+        try {
+            const currentFilters = { ...filters, search: debouncedSearchTerm };
+            const transactionsData = await api.transactions.getAll(currentFilters, selectedAccountId);
+            setTransactions(transactionsData);
+        } catch (error) {
+            console.error('Error fetching transactions:', error);
+            toast({ title: "Error", description: `Failed to fetch transactions. ${error.message}`, variant: "destructive" });
+        } finally {
+            setIsTransactionLoading(false);
+        }
+    }, [debouncedSearchTerm, filters, selectedAccountId, toast]);
+
     const loadCoreData = useCallback(async () => {
         if (!accounts.length) setLoading(true);
 
@@ -68,7 +82,7 @@ export const useBudgetData = () => {
 
             const [
                 accountsData, dashboardStats, incomeStats, expenseStats, 
-                trendStats, peopleData, peopleStatsData, groupsData, groupStatsData // ✨ ADDED groups
+                trendStats, peopleData, peopleStatsData, groupsData, groupStatsData
             ] = await Promise.all([
                 api.accounts.getAll(),
                 api.stats.getDashboardStats(selectedAccountId),
@@ -77,15 +91,15 @@ export const useBudgetData = () => {
                 api.stats.getGranularTrendStats(trendParams),
                 api.people.getAll(),
                 api.stats.getPeopleStats(selectedAccountId),
-                api.groups.getAll(), // ✨ ADDED
-                api.stats.getGroupsSummaryStats(selectedAccountId) // ✨ ADDED
+                api.groups.getAll(),
+                api.stats.getGroupsSummaryStats(selectedAccountId)
             ]);
 
             setAccounts(accountsData);
             setPeople(peopleData);
             setPeopleStats(peopleStatsData);
-            setGroups(groupsData); // ✨ ADDED
-            setGroupStats(groupStatsData); // ✨ ADDED
+            setGroups(groupsData);
+            setGroupStats(groupStatsData);
             setStats({ totalIncome: dashboardStats.total_income || 0, totalExpenses: dashboardStats.total_expenses || 0, balance: dashboardStats.balance || 0, transactionCount: dashboardStats.transaction_count || 0 });
             setChartData({ incomeData: incomeStats, expenseData: expenseStats, trendData: trendStats });
 
@@ -98,7 +112,7 @@ export const useBudgetData = () => {
         } finally {
             setLoading(false);
         }
-    }, [selectedAccountId, trendPeriod, trendDateRange.from, trendDateRange.to]);
+    }, [selectedAccountId, trendPeriod, trendDateRange.from, trendDateRange.to, toast, accounts.length, formData.account_id]);
 
     useEffect(() => {
         loadCoreData();
@@ -106,50 +120,35 @@ export const useBudgetData = () => {
 
     useEffect(() => {
         if (loading) return;
-        const fetchTransactions = async () => {
-            setIsTransactionLoading(true);
-            try {
-                const currentFilters = { ...filters, search: debouncedSearchTerm };
-                const transactionsData = await api.transactions.getAll(currentFilters, selectedAccountId);
-                setTransactions(transactionsData);
-            } catch (error) {
-                console.error('Error fetching transactions:', error);
-                toast({ title: "Error", description: `Failed to fetch transactions. ${error.message}`, variant: "destructive" });
-            } finally {
-                setIsTransactionLoading(false);
-            }
-        };
         fetchTransactions();
-    }, [debouncedSearchTerm, filters.type, filters.category, filters.sort, selectedAccountId, loading, toast]);
+    }, [loading, fetchTransactions]);
 
     // --- HANDLERS ---
-    const handleCreateGroup = async (groupData) => { // ✨ ADDED
+    const handleCreateGroup = async (groupData) => {
         try {
             await api.groups.create(groupData);
             toast({ title: "Success!", description: `Group '${groupData.name}' has been created.` });
-            await loadCoreData(); // Refresh data to show the new group
+            await Promise.all([loadCoreData(), fetchTransactions()]);
         } catch (error) {
             toast({ title: "Error", description: `Failed to create group: ${error.message}`, variant: "destructive" });
         }
     };
     
-        // ✨ ADDED: Handler to update a group ✨
     const handleUpdateGroup = async (groupId, groupData) => {
         try {
             await api.groups.update(groupId, groupData);
             toast({ title: "Success!", description: `Group '${groupData.name}' has been updated.` });
-            await loadCoreData(); // Refresh all data
+            await Promise.all([loadCoreData(), fetchTransactions()]);
         } catch (error) {
             toast({ title: "Error", description: `Failed to update group: ${error.message}`, variant: "destructive" });
         }
     };
 
-    // ✨ ADDED: Handler to delete a group ✨
     const handleDeleteGroup = async (groupId) => {
         try {
             await api.groups.delete(groupId);
             toast({ title: "Success!", description: "Group has been deleted." });
-            await loadCoreData(); // Refresh all data
+            await Promise.all([loadCoreData(), fetchTransactions()]);
         } catch (error) {
             toast({ title: "Error", description: `Failed to delete group: ${error.message}`, variant: "destructive" });
         }
@@ -165,6 +164,7 @@ export const useBudgetData = () => {
             toast({ title: "Success", description: "Account created." });
             setNewAccountName("");
             setSelectedAccountId(newAccount.id);
+            await Promise.all([loadCoreData(), fetchTransactions()]);
         } catch (error) {
             toast({ title: "Error", description: "Failed to create account.", variant: "destructive" });
         }
@@ -175,6 +175,7 @@ export const useBudgetData = () => {
             await api.accounts.delete(accountId);
             toast({ title: "Success", description: "Account and its transactions have been deleted." });
             setSelectedAccountId('all');
+            await Promise.all([loadCoreData(), fetchTransactions()]);
         } catch (error) {
             toast({ title: "Error", description: "Failed to delete account.", variant: "destructive" });
         }
@@ -185,7 +186,6 @@ export const useBudgetData = () => {
         const finalCategory = formData.category === 'Custom' ? formData.customCategory : formData.category;
         if (!formData.amount || !finalCategory) return toast({ title: "Validation Error", description: "Amount and Category are required.", variant: "destructive" });
         
-        // ✨ FIX: Determine the correct person name when adding a new one
         let personValue = null;
         if (formData.transaction_with === 'person') {
             if (formData.person === 'add_new') {
@@ -206,7 +206,7 @@ export const useBudgetData = () => {
             description: formData.description,
             date: formData.date,
             account_id: formData.account_id,
-            person: personValue, // ✨ FIX: Use the correctly determined person value
+            person: personValue,
             group_id: formData.transaction_with === 'group' ? formData.group_id : null,
         };
 
@@ -219,7 +219,7 @@ export const useBudgetData = () => {
                 toast({ title: "Success", description: "Transaction added." });
             }
             setIsFormDialogOpen(false);
-            loadCoreData();
+            await Promise.all([loadCoreData(), fetchTransactions()]);
         } catch (error) {
             toast({ title: "Error", description: error.message || "Failed to save transaction", variant: "destructive" });
         }
@@ -230,7 +230,7 @@ export const useBudgetData = () => {
         try {
             await api.transactions.delete(deletingTransactionId);
             toast({ title: "Success", description: "Transaction deleted." });
-            loadCoreData();
+            await Promise.all([loadCoreData(), fetchTransactions()]);
         } catch (error) {
             toast({ title: "Error", description: "Failed to delete transaction.", variant: "destructive" });
         } finally {
@@ -244,7 +244,7 @@ export const useBudgetData = () => {
         try {
             await api.people.settleUp(person.name, account_id);
             toast({ title: "Success!", description: `Balance with ${person.name} has been settled.` });
-            await loadCoreData();
+            await Promise.all([loadCoreData(), fetchTransactions()]);
         } catch (error) {
             toast({ title: "Error", description: `Could not settle up. ${error.message}`, variant: "destructive" });
         }
@@ -255,7 +255,7 @@ export const useBudgetData = () => {
         navigate('/login');
         toast({ title: "Logged Out" });
     };
-
+    
     const handleDeleteUserAccount = async () => {
         try {
             await api.auth.deleteAccount();
@@ -265,21 +265,20 @@ export const useBudgetData = () => {
             toast({ title: "Error", description: `Failed to delete your account. ${error.message}`, variant: "destructive" });
         }
     };
-    
+
     const handleFilterChange = (key, value) => setFilters(prev => ({ ...prev, [key]: value }));
 
     const resetForm = useCallback(() => {
         setFormData({
             type: 'expense', category: '', amount: '', description: '',
             date: new Date().toISOString().split('T')[0], customCategory: '',
-            person: '', newPerson: '',
-            // If a specific account is selected, use it. Otherwise, default to the first account.
+            person: '', newPerson: '', 
             account_id: selectedAccountId !== 'all' ? selectedAccountId : (accounts.length > 0 ? accounts[0].id : ''),
             transaction_with: 'person',
             group_id: ''
         });
         setEditingTransaction(null);
-    }, [accounts, selectedAccountId]); // Add selectedAccountId to the dependency array
+    }, [accounts, selectedAccountId]);
 
     const handleEditClick = (transaction) => {
         setEditingTransaction(transaction);
@@ -297,8 +296,8 @@ export const useBudgetData = () => {
             person: transaction.person || '',
             newPerson: '',
             account_id: transaction.account_id,
-            transaction_with: transaction.group_id ? 'group' : 'person', // ✨ ADDED
-            group_id: transaction.group_id || '' // ✨ ADDED
+            transaction_with: transaction.group_id ? 'group' : 'person',
+            group_id: transaction.group_id || ''
         });
         setIsFormDialogOpen(true);
     };
@@ -323,7 +322,7 @@ export const useBudgetData = () => {
         peopleStats, accounts, selectedAccountId, isManageAccountsOpen, newAccountName, 
         isFormDialogOpen, editingTransaction, isDeleteDialogOpen, filters, formData,
         trendPeriod, trendDateRange,
-        groups, groupStats, // ✨ ADDED
+        groups, groupStats,
         
         setSelectedAccountId, setIsManageAccountsOpen, setNewAccountName, setIsFormDialogOpen,
         setIsDeleteDialogOpen, setFormData, setTrendPeriod, setTrendDateRange,
@@ -331,10 +330,11 @@ export const useBudgetData = () => {
         handleSettleUp, handleLogout, handleCreateAccount, handleDeleteAccount, resetForm,
         handleFormSubmit, handleEditClick, handleDeleteClick, handleDeleteConfirm,
         handleFilterChange,
-        handleCreateGroup, // ✨ ADDED
-        handleUpdateGroup, // ✨ ADDED
-        handleDeleteGroup, // ✨ ADDED
-        handleDeleteUserAccount, // Add the new handler
+        handleCreateGroup, 
+        handleUpdateGroup, 
+        handleDeleteGroup,
+        handleDeleteUserAccount,
+
         uniqueCategories, filteredTotals, isFilterActive,
     };
 };
