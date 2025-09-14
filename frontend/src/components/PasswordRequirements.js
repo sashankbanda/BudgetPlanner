@@ -2,35 +2,33 @@ import React from 'react';
 import { Check, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 
-// Defines the rules for a strong password
-const requirements = [
-    { regex: /.{8,}/, text: "At least 8 characters" },
-    { regex: /[a-z]/, text: "Contains a lowercase letter" },
-    { regex: /[A-Z]/, text: "Contains an uppercase letter" },
-    { regex: /[0-9]/, text: "Contains a number" },
-    { regex: /[^A-Za-z0-9]/, text: "Contains a special character" },
-];
-
 const PasswordRequirements = ({ password }) => {
-    return (
-        <div className="space-y-1.5 mt-3">
-            {requirements.map((req, index) => {
-                const isValid = req.regex.test(password);
-                return (
-                    <div key={index} className="flex items-center text-xs transition-colors">
-                        {isValid ? (
-                            <Check className="w-4 h-4 mr-2 text-green-400 flex-shrink-0" />
-                        ) : (
-                            <X className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
-                        )}
-                        <span className={cn("transition-colors", isValid ? "text-gray-300" : "text-gray-500")}>
-                            {req.text}
-                        </span>
-                    </div>
-                );
-            })}
-        </div>
-    );
+    // Regex for password requirements
+    const requirements = [
+        { label: 'At least 8 characters', check: (p) => p.length >= 8 },
+        { label: 'Contains a lowercase letter', check: (p) => /[a-z]/.test(p) },
+        { label: 'Contains an uppercase letter', check: (p) => /[A-Z]/.test(p) },
+        { label: 'Contains a number', check: (p) => /[0-9]/.test(p) },
+        { label: 'Contains a special character', check: (p) => /[^A-Za-z0-9]/.test(p) },
+    ];
+
+    return (
+        <div className="space-y-2 text-sm">
+            {requirements.map((req, index) => {
+                const isMet = req.check(password);
+                return (
+                    <div key={index} className="flex items-center space-x-2">
+                        {isMet ? (
+                            <Check className="h-4 w-4 text-green-500" />
+                        ) : (
+                            <X className="h-4 w-4 text-red-500" />
+                        )}
+                        <span className={cn(isMet ? 'text-gray-300' : 'text-gray-500')}>{req.label}</span>
+                    </div>
+                );
+            })}
+        </div>
+    );
 };
 
 export default PasswordRequirements;
