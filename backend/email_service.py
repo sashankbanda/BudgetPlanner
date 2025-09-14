@@ -18,9 +18,11 @@ conf = ConnectionConfig(
     MAIL_FROM = os.environ.get("MAIL_FROM"),
     MAIL_PORT = int(os.environ.get("MAIL_PORT", 587)),
     MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.gmail.com"),
-    # ⚠️ FIX: Use the correct parameter names `MAIL_USE_TLS` and `MAIL_USE_SSL`
-    MAIL_USE_TLS = True,
-    MAIL_USE_SSL = False,
+    # ⚠️ FIX: The library expects `MAIL_USE_TLS` and `MAIL_USE_SSL` as booleans, not strings.
+    # The error message from Pydantic is slightly misleading, but the core issue is the model fields changed.
+    # We will pass the values directly as booleans to avoid the `extra_forbidden` error.
+    MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", 'True').lower() in ('true', '1', 't'),
+    MAIL_USE_SSL = os.environ.get("MAIL_USE_SSL", 'False').lower() in ('true', '1', 't'),
     USE_CREDENTIALS = True,
     VALIDATE_CERTS = True,
     TEMPLATE_FOLDER = ROOT_DIR / 'templates',
