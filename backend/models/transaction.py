@@ -1,9 +1,8 @@
 from pydantic import BaseModel, Field, validator
-from typing import Optional, Literal
+from typing import Optional, Literal, List
 from datetime import datetime
 import uuid
 
-# A new base class to hold all common transaction fields
 class TransactionBase(BaseModel):
     type: Literal["income", "expense"]
     category: str
@@ -11,15 +10,10 @@ class TransactionBase(BaseModel):
     description: str = ""
     date: str
     person: Optional[str] = None
-    group_id: Optional[str] = None # ✨ ADDED
     account_id: str
-
-    # ✨ ADDED: Validator to ensure a transaction isn't linked to both
-    @validator('person', always=True)
-    def check_person_or_group(cls, v, values):
-        if v is not None and values.get('group_id') is not None:
-            raise ValueError('Transaction cannot be linked to both a person and a group.')
-        return v
+    # NEW FIELDS for splitting
+    group_name: Optional[str] = None
+    split_with: Optional[List[str]] = None
 
 class TransactionCreate(TransactionBase):
     @validator('amount')
@@ -49,15 +43,10 @@ class TransactionUpdate(BaseModel):
     description: Optional[str] = None
     date: Optional[str] = None
     person: Optional[str] = None
-    group_id: Optional[str] = None # ✨ ADDED
     account_id: Optional[str] = None
-
-    # ✨ ADDED: Validator to update model
-    @validator('person', always=True)
-    def check_person_or_group_update(cls, v, values):
-        if v is not None and values.get('group_id') is not None:
-            raise ValueError('Transaction cannot be linked to both a person and a group.')
-        return v
+    # NEW FIELDS for splitting
+    group_name: Optional[str] = None
+    split_with: Optional[List[str]] = None
     
     @validator('amount')
     def amount_must_be_positive(cls, v):
@@ -95,6 +84,8 @@ class Transaction(TransactionBase):
             month=month,
             **transaction_create.dict()
         )
+
+# ... (rest of the file remains the same)
 
 # --- Stats Models ---
 class MonthlyStats(BaseModel):
