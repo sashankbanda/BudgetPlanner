@@ -221,21 +221,27 @@ export const statsAPI = {
         return apiClient.get('/stats/groups', { params }).then(res => res.data);
     },
     getDateRange: () => apiClient.get('/stats/date-range').then(res => res.data),
+    getSplits: (accountId) => {
+        const params = accountId && accountId !== 'all' ? { account_id: accountId } : {};
+        return apiClient.get('/stats/splits', { params }).then(res => res.data);
+    },
 };
 
 export const peopleAPI = {
-    getAll: () => apiClient.get('/people').then(res => res.data),
-    settleUp: (name, account_id) => apiClient.post(`/people/${name}/settle`, { account_id }).then(res => res.data),
+    getAll: () => apiClient.get('/people').then(res => res.data),
+    // ✨ FIX: Ensure the 'name' variable is correctly used in the URL template
+    settleUp: (name, account_id) => apiClient.post(`/people/${name}/settle`, { account_id }).then(res => res.data),
 };
 
 
+// ✨ The groupAPI has been removed from this file.
+
 const api = {
-    auth: authAPI,
-    accounts: accountAPI,
-    groups: groupAPI, // ✨ ADDED
-    transactions: transactionAPI,
-    stats: statsAPI,
-    people: peopleAPI
+    auth: authAPI,
+    accounts: accountAPI,
+    transactions: transactionAPI,
+    stats: statsAPI,
+    people: peopleAPI
 };
 
 export default api;

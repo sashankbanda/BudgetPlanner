@@ -6,21 +6,13 @@ import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { Search, Pencil, Trash2, User, Users2, Loader2 } from 'lucide-react'; // ✨ ADDED Users2
+import { Search, Pencil, Trash2, User, Users2, Loader2 } from 'lucide-react';
 
 const TransactionList = ({
     transactions, loading, handleEditClick, handleDeleteClick,
     filters, handleFilterChange, uniqueCategories,
-    isFilterActive, filteredTotals,
-    groups // ✨ ADDED
+    isFilterActive, filteredTotals
 }) => {
-    
-    // Helper to find group name from ID
-    const getGroupName = (groupId) => {
-        const group = groups.find(g => g.id === groupId);
-        return group ? group.name : 'Unknown Group';
-    };
-
     return (
         <Card className="glass-card">
             <CardHeader><CardTitle className="electric-accent">Transactions History</CardTitle></CardHeader>
@@ -94,11 +86,10 @@ const TransactionList = ({
                                         <Badge className={`${t.type === 'income' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>{t.type === 'income' ? 'Income' : 'Expense'}</Badge>
                                         <span className="font-semibold text-white/70">{t.category}</span>
                                         {t.person && (<Badge variant="outline" className="border-blue-500/50 text-blue-400"><User className="w-3 h-3 mr-1" />{t.person}</Badge>)}
-                                        {/* ✨ ADDED: Display group name if it exists */}
-                                        {t.group_id && (
+                                        {t.split_with && t.split_with.length > 0 && (
                                             <Badge variant="outline" className="border-purple-500/50 text-purple-400">
                                                 <Users2 className="w-3 h-3 mr-1" />
-                                                {getGroupName(t.group_id)}
+                                                {t.group_name || 'Split Expense'}
                                             </Badge>
                                         )}
                                     </div>
