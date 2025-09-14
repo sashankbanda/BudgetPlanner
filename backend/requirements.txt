@@ -8,10 +8,8 @@ pymongo==4.5.0
 pydantic>=2.6.4
 email-validator>=2.2.0
 pyjwt>=2.10.1
-# passlib[bcrypt]>=1.7.4
-# bcrypt>=4.0.1
 passlib[bcrypt]>=1.7.4
-bcrypt>=4.0.1,<4.1.0 # FIX: Specify a compatible version to silence the warning
+bcrypt>=4.0.1,<4.1.0
 tzdata>=2024.2
 motor==3.3.1
 pytest>=8.0.0
@@ -27,4 +25,5 @@ python-multipart>=0.0.9
 jq>=1.6.0
 typer>=0.9.0
 google-auth>=2.22.0
-fastapi-mail>=1.4.1
+# ⚠️ FIX: Explicitly pin the version of fastapi-mail to avoid a breaking change.
+fastapi-mail==1.4.1

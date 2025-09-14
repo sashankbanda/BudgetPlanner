@@ -17,8 +17,9 @@ conf = ConnectionConfig(
     MAIL_FROM = os.environ.get("MAIL_FROM"),
     MAIL_PORT = int(os.environ.get("MAIL_PORT", 587)),
     MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.gmail.com"),
-    MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS", 'True').lower() in ('true', '1', 't'),
-    MAIL_USE_SSL = os.environ.get("MAIL_USE_SSL", 'False').lower() in ('true', '1', 't'),
+    # ⚠️ FIX: Corrected parameter names based on the error log.
+    MAIL_STARTTLS = os.environ.get("MAIL_STARTTLS", 'True').lower() in ('true', '1', 't'),
+    MAIL_SSL_TLS = os.environ.get("MAIL_SSL_TLS", 'False').lower() in ('true', '1', 't'),
     USE_CREDENTIALS = True,
     VALIDATE_CERTS = True,
     TEMPLATE_FOLDER = ROOT_DIR / 'templates',
