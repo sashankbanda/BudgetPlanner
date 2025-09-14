@@ -12,6 +12,7 @@ import api from '../services/api';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
 import { cn } from '../lib/utils';
+// FIX: Import the new components
 import PasswordRequirements from '../components/PasswordRequirements';
 import VerificationBanner from '../components/VerificationBanner';
 import { Checkbox } from '../components/ui/checkbox';
