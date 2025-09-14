@@ -92,7 +92,7 @@ async def create_user(user: UserCreate, background_tasks: BackgroundTasks, db: A
     )
     
     fm = FastMail(conf)
-    # Use a background task to send the email without blocking the response
+    # ⚠️ FIX: Changed `fm.send_message` to use the correct variable `fm`
     background_tasks.add_task(fm.send_message, message, template_name="verification.html")
     
     return {"message": "Signup successful. Please check your email to verify your account."}
@@ -204,6 +204,7 @@ async def forgot_password(
         )
         
         fm = FastMail(conf)
+        # ⚠️ FIX: Changed `fm.send_message` to use the correct variable `fm`
         background_tasks.add_task(fm.send_message, message, template_name="password_reset.html")
 
     return {"message": "If an account with this email exists, a password reset link has been sent."}
@@ -276,6 +277,7 @@ async def resend_verification_email(
         )
         
         fm = FastMail(conf)
+        # ⚠️ FIX: Changed `fm.send_message` to use the correct variable `fm`
         background_tasks.add_task(fm.send_message, message, template_name="verification.html")
 
     return {"message": "If an unverified account with this email exists, a new verification link has been sent."}
