@@ -120,7 +120,7 @@ const AuthPage = () => {
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
-        setUnverifiedEmail(''); // Reset unverified state on new login attempt
+        setUnverifiedEmail('');
         try {
             await api.auth.login(loginEmail, loginPassword, rememberMe);
             toast({ title: "Success", description: "Logged in successfully!" });
