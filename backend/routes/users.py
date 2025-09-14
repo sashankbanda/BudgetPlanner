@@ -91,7 +91,7 @@ async def create_user(user: UserCreate, background_tasks: BackgroundTasks, db: A
         subtype=MessageType.html
     )
     
-    m = FastMail(conf)
+    fm = FastMail(conf)
     # Use a background task to send the email without blocking the response
     background_tasks.add_task(fm.send_message, message, template_name="verification.html")
     
@@ -108,10 +108,10 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         )
     
     if not user.get("verified", False):
-         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email not verified. Please check your inbox for a verification link.",
-        )
+          raise HTTPException(
+              status_code=status.HTTP_401_UNAUTHORIZED,
+              detail="Email not verified. Please check your inbox for a verification link.",
+          )
 
     access_token = create_access_token(data={"sub": user["_id"]})
     refresh_token = create_refresh_token(data={"sub": user["_id"]})
