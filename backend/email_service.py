@@ -18,9 +18,9 @@ conf = ConnectionConfig(
     MAIL_FROM = os.environ.get("MAIL_FROM"),
     MAIL_PORT = int(os.environ.get("MAIL_PORT", 587)),
     MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.gmail.com"),
-    # ✨ FIX: Use MAIL_TLS for STARTTLS on port 587
-    MAIL_TLS = True,
-    MAIL_SSL = False,
+    # ✨ FIX: Use the correct parameter names `MAIL_STARTTLS` and `MAIL_SSL_TLS`
+    MAIL_STARTTLS = True,
+    MAIL_SSL_TLS = False,
     USE_CREDENTIALS = True,
     VALIDATE_CERTS = True,
     TEMPLATE_FOLDER = ROOT_DIR / 'templates',
