@@ -91,7 +91,7 @@ async def create_user(user: UserCreate, background_tasks: BackgroundTasks, db: A
         subtype=MessageType.html
     )
     
-    fm = FastMail(conf)
+    m = FastMail(conf)
     # Use a background task to send the email without blocking the response
     background_tasks.add_task(fm.send_message, message, template_name="verification.html")
     
@@ -257,11 +257,9 @@ async def resend_verification_email(
 ):
     user = await db.users.find_one({"_id": request.email})
 
-    # Only proceed if the user exists and is NOT verified
     if user and not user.get("verified", False):
         verification_token = str(uuid.uuid4())
         
-        # Update the user's token in the DB
         await db.users.update_one(
             {"_id": request.email},
             {"$set": {"verification_token": verification_token}}
@@ -280,7 +278,6 @@ async def resend_verification_email(
         fm = FastMail(conf)
         background_tasks.add_task(fm.send_message, message, template_name="verification.html")
 
-    # Always return the same message to prevent email enumeration attacks
     return {"message": "If an unverified account with this email exists, a new verification link has been sent."}
 
 # ADD THIS to delete account completely
