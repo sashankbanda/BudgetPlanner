@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertCircle, XCircle, CheckCircle } from 'lucide-react';
+import { AlertCircle, XCircle, CheckCircle, Loader2 } from 'lucide-react'; // ADDED Loader2
 import { Button } from './ui/button';
 import api from '../services/api';
 import { useToast } from '../hooks/use-toast';
