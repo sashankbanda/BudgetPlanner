@@ -19,11 +19,15 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from jose import jwt, JWTError
 
-from fastapi_mail import MessageSchema, MessageType
-# ⚠️ FIX: Import the global fm instance instead of conf
-from email_service import fm
+from fastapi_mail import FastMail, MessageSchema, MessageType
+# ⚠️ FIX: Import `conf` to be used for dependency injection
+from email_service import conf
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+# ⚠️ NEW FUNCTION: This dependency will provide a FastMail instance to the routes.
+def get_fastmail():
+    return FastMail(conf)
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -52,7 +56,12 @@ class ResendVerificationRequest(BaseModel):
 
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
-async def create_user(user: UserCreate, background_tasks: BackgroundTasks, db: AsyncIOMotorDatabase = Depends(get_database)):
+async def create_user(
+    user: UserCreate, 
+    background_tasks: BackgroundTasks, 
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    fm: FastMail = Depends(get_fastmail) # ⚠️ FIX: Inject the FastMail dependency
+):
     if len(user.password) < 8:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -90,7 +99,6 @@ async def create_user(user: UserCreate, background_tasks: BackgroundTasks, db: A
         subtype=MessageType.html
     )
     
-    # ⚠️ FIX: Use the globally imported 'fm' instance
     background_tasks.add_task(fm.send_message, message, template_name="verification.html")
     
     return {"message": "Signup successful. Please check your email to verify your account."}
@@ -180,7 +188,8 @@ async def refresh_access_token(request: RefreshTokenRequest, db: AsyncIOMotorDat
 async def forgot_password(
     request: ForgotPasswordRequest,
     background_tasks: BackgroundTasks,
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    fm: FastMail = Depends(get_fastmail) # ⚠️ FIX: Inject the FastMail dependency
 ):
     user = await db.users.find_one({"_id": request.email})
     if user:
@@ -201,7 +210,6 @@ async def forgot_password(
             subtype=MessageType.html
         )
         
-        # ⚠️ FIX: Use the globally imported 'fm' instance
         background_tasks.add_task(fm.send_message, message, template_name="password_reset.html")
 
     return {"message": "If an account with this email exists, a password reset link has been sent."}
@@ -250,7 +258,8 @@ async def verify_email(token: str, db: AsyncIOMotorDatabase = Depends(get_databa
 async def resend_verification_email(
     request: ResendVerificationRequest,
     background_tasks: BackgroundTasks,
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    fm: FastMail = Depends(get_fastmail) # ⚠️ FIX: Inject the FastMail dependency
 ):
     user = await db.users.find_one({"_id": request.email})
 
@@ -272,7 +281,6 @@ async def resend_verification_email(
             subtype=MessageType.html
         )
         
-        # ⚠️ FIX: Use the globally imported 'fm' instance
         background_tasks.add_task(fm.send_message, message, template_name="verification.html")
 
     return {"message": "If an unverified account with this email exists, a new verification link has been sent."}
