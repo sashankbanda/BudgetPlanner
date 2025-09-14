@@ -15,6 +15,7 @@ import { cn } from '../lib/utils';
 // FIX: Import the new component
 import PasswordRequirements from '../components/PasswordRequirements';
 import VerificationBanner from '../components/VerificationBanner';
+import { Checkbox } from '../components/ui/checkbox'; // ADDED: Import the Checkbox component
 
 const GoogleIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
