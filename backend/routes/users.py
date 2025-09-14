@@ -7,7 +7,7 @@ from auth import (
     verify_password,
     create_access_token,
     create_refresh_token,
-    get_current_user_id, # Ensure this is imported
+    get_current_user_id,
 )
 from motor.motor_asyncio import AsyncIOMotorDatabase
 import logging
@@ -19,8 +19,9 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 from jose import jwt, JWTError
 
-from fastapi_mail import FastMail, MessageSchema, MessageType
-from email_service import conf
+from fastapi_mail import MessageSchema, MessageType
+# ⚠️ FIX: Import the global fm instance instead of conf
+from email_service import fm
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -46,7 +47,6 @@ class ResetPasswordRequest(BaseModel):
 class GoogleLoginRequest(BaseModel):
     id_token: str
 
-# ⚠️ ADD THIS NEW CLASS
 class ResendVerificationRequest(BaseModel):
     email: EmailStr
 
@@ -80,7 +80,6 @@ async def create_user(user: UserCreate, background_tasks: BackgroundTasks, db: A
     
     await db.users.insert_one(user_document)
     
-    # Use your frontend's URL. It's best to set this in your .env file.
     frontend_url = os.environ.get("FRONTEND_URL", "https://allocash.netlify.app")
     verification_url = f"{frontend_url}/verify-email?token={verification_token}"
 
@@ -91,8 +90,7 @@ async def create_user(user: UserCreate, background_tasks: BackgroundTasks, db: A
         subtype=MessageType.html
     )
     
-    fm = FastMail(conf)
-    # ⚠️ FIX: Changed `fm.send_message` to use the correct variable `fm`
+    # ⚠️ FIX: Use the globally imported 'fm' instance
     background_tasks.add_task(fm.send_message, message, template_name="verification.html")
     
     return {"message": "Signup successful. Please check your email to verify your account."}
@@ -203,8 +201,7 @@ async def forgot_password(
             subtype=MessageType.html
         )
         
-        fm = FastMail(conf)
-        # ⚠️ FIX: Changed `fm.send_message` to use the correct variable `fm`
+        # ⚠️ FIX: Use the globally imported 'fm' instance
         background_tasks.add_task(fm.send_message, message, template_name="password_reset.html")
 
     return {"message": "If an account with this email exists, a password reset link has been sent."}
@@ -249,7 +246,6 @@ async def verify_email(token: str, db: AsyncIOMotorDatabase = Depends(get_databa
         raise HTTPException(status_code=400, detail="Invalid or expired verification token.")
     return {"message": "Email verified successfully. You can now log in."}
 
-# ⚠️ ADD THIS NEW ENDPOINT
 @router.post("/resend-verification", status_code=status.HTTP_200_OK)
 async def resend_verification_email(
     request: ResendVerificationRequest,
@@ -276,13 +272,11 @@ async def resend_verification_email(
             subtype=MessageType.html
         )
         
-        fm = FastMail(conf)
-        # ⚠️ FIX: Changed `fm.send_message` to use the correct variable `fm`
+        # ⚠️ FIX: Use the globally imported 'fm' instance
         background_tasks.add_task(fm.send_message, message, template_name="verification.html")
 
     return {"message": "If an unverified account with this email exists, a new verification link has been sent."}
 
-# ⚠️ ADD THIS to delete account completely
 @router.delete("/me", status_code=status.HTTP_200_OK)
 async def delete_current_user(
     user_id: str = Depends(get_current_user_id),
@@ -292,12 +286,9 @@ async def delete_current_user(
     Permanently deletes the current user and all their associated data.
     This action is irreversible.
     """
-    # Delete all data associated with the user first
     await db.transactions.delete_many({"user_id": user_id})
     await db.accounts.delete_many({"user_id": user_id})
-    # await db.groups.delete_many({"user_id": user_id}) ⚠️ This line has been commented out as groups are no longer a separate collection.
     
-    # Finally, delete the user document itself
     result = await db.users.delete_one({"_id": user_id})
     
     if result.deleted_count == 0:
