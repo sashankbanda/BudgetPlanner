@@ -14,6 +14,7 @@ import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
 import { cn } from '../lib/utils';
 // FIX: Import the new component
 import PasswordRequirements from '../components/PasswordRequirements';
+import VerificationBanner from '../components/VerificationBanner';
 
 const GoogleIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -98,6 +99,7 @@ const AuthPage = () => {
     const [showLoginPassword, setShowLoginPassword] = useState(false);
     const [showSignupPassword, setShowSignupPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [unverifiedEmail, setUnverifiedEmail] = useState('');
 
     const [errors, setErrors] = useState({});
 
@@ -118,12 +120,18 @@ const AuthPage = () => {
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setUnverifiedEmail(''); // Reset unverified state on new login attempt
         try {
             await api.auth.login(loginEmail, loginPassword, rememberMe);
             toast({ title: "Success", description: "Logged in successfully!" });
             navigate('/');
         } catch (error) {
-            toast({ title: "Login Failed", description: error.message, variant: "destructive" });
+            if (error.message.includes("Email not verified")) {
+                setUnverifiedEmail(loginEmail);
+                toast({ title: "Login Failed", description: error.message, variant: "destructive" });
+            } else {
+                toast({ title: "Login Failed", description: error.message, variant: "destructive" });
+            }
         } finally {
             setLoading(false);
         }
@@ -181,6 +189,7 @@ const AuthPage = () => {
                     <Card className="glass-card border-0">
                         <CardHeader><CardTitle className="electric-accent text-center text-2xl">Welcome Back</CardTitle></CardHeader>
                         <CardContent>
+                            {unverifiedEmail && <VerificationBanner email={unverifiedEmail} />}
                             <form onSubmit={handleLogin} className="space-y-4">
                                 <div>
                                     <Label htmlFor="login-email" className="text-gray-300">Email</Label>
