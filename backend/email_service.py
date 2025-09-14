@@ -11,12 +11,12 @@ conf = ConnectionConfig(
     MAIL_USERNAME = os.environ.get("MAIL_USERNAME"),
     MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD"), # Use the App Password here
     MAIL_FROM = os.environ.get("MAIL_FROM"),
-    MAIL_PORT = int(os.environ.get("MAIL_PORT", 587)),
+    # ✨ FIX: Use port 465 with SSL/TLS enabled for more reliable connection
+    MAIL_PORT = int(os.environ.get("MAIL_PORT", 465)),
     MAIL_SERVER = os.environ.get("MAIL_SERVER", "smtp.gmail.com"),
-    MAIL_STARTTLS = True,
-    MAIL_SSL_TLS = False,
+    MAIL_STARTTLS = False, # Disable STARTTLS
+    MAIL_SSL_TLS = True, # Enable SSL/TLS
     USE_CREDENTIALS = True,
     VALIDATE_CERTS = True,
-    # ✨ FIX: Tell fastapi-mail where to find the templates directory ✨
     TEMPLATE_FOLDER = ROOT_DIR / 'templates'
 )
