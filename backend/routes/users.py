@@ -46,7 +46,7 @@ class ResetPasswordRequest(BaseModel):
 class GoogleLoginRequest(BaseModel):
     id_token: str
 
-# ADD THIS NEW CLASS
+# ⚠️ ADD THIS NEW CLASS
 class ResendVerificationRequest(BaseModel):
     email: EmailStr
 
@@ -248,7 +248,7 @@ async def verify_email(token: str, db: AsyncIOMotorDatabase = Depends(get_databa
         raise HTTPException(status_code=400, detail="Invalid or expired verification token.")
     return {"message": "Email verified successfully. You can now log in."}
 
-# ADD THIS NEW ENDPOINT
+# ⚠️ ADD THIS NEW ENDPOINT
 @router.post("/resend-verification", status_code=status.HTTP_200_OK)
 async def resend_verification_email(
     request: ResendVerificationRequest,
@@ -280,7 +280,7 @@ async def resend_verification_email(
 
     return {"message": "If an unverified account with this email exists, a new verification link has been sent."}
 
-# ADD THIS to delete account completely
+# ⚠️ ADD THIS to delete account completely
 @router.delete("/me", status_code=status.HTTP_200_OK)
 async def delete_current_user(
     user_id: str = Depends(get_current_user_id),
@@ -293,7 +293,7 @@ async def delete_current_user(
     # Delete all data associated with the user first
     await db.transactions.delete_many({"user_id": user_id})
     await db.accounts.delete_many({"user_id": user_id})
-    await db.groups.delete_many({"user_id": user_id})
+    # await db.groups.delete_many({"user_id": user_id}) ⚠️ This line has been commented out as groups are no longer a separate collection.
     
     # Finally, delete the user document itself
     result = await db.users.delete_one({"_id": user_id})
