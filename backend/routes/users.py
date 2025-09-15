@@ -101,10 +101,21 @@ async def create_user(
     try:  #❗ Add error logging for Render
         background_tasks.add_task(fm.send_message, message, template_name="verification.html")
     except Exception as e:
-        logging.error(f"Failed to send verification email: {e}")  #❗
+        import logging
+        logging.error(f"Error sending email: {e}")  #❗ Add this for debugging
 
     return {"message": "Signup successful. Please check your email to verify your account."}
 
+@router.get("/test-email")
+async def test_email(fm: FastMail = Depends(get_fastmail)):
+    message = MessageSchema(
+        subject="Test Email",
+        recipients=["bandasashank@gmail.com"],  #❗ put your email here
+        body="This is a test email from Render backend",
+        subtype="plain"
+    )
+    await fm.send_message(message)
+    return {"message": "Test email triggered"}
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncIOMotorDatabase = Depends(get_database)):
