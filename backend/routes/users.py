@@ -8,6 +8,7 @@ from auth import (
     create_access_token,
     create_refresh_token,
     get_current_user_id,
+    SECRET_KEY,  #❗ Import shared SECRET_KEY
 )
 from motor.motor_asyncio import AsyncIOMotorDatabase
 import logging
@@ -20,12 +21,10 @@ from google.auth.transport import requests as google_requests
 from jose import jwt, JWTError
 
 from fastapi_mail import FastMail, MessageSchema, MessageType
-# ⚠️ FIX: Import `conf` to be used for dependency injection
 from email_service import conf
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-# ⚠️ NEW FUNCTION: This dependency will provide a FastMail instance to the routes.
 def get_fastmail():
     return FastMail(conf)
 
@@ -40,7 +39,7 @@ class Token(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
-    
+
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
@@ -57,10 +56,10 @@ class ResendVerificationRequest(BaseModel):
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def create_user(
-    user: UserCreate, 
-    background_tasks: BackgroundTasks, 
+    user: UserCreate,
+    background_tasks: BackgroundTasks,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    fm: FastMail = Depends(get_fastmail) # ⚠️ FIX: Inject the FastMail dependency
+    fm: FastMail = Depends(get_fastmail)
 ):
     if len(user.password) < 8:
         raise HTTPException(
@@ -74,10 +73,10 @@ async def create_user(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered",
         )
-    
+
     hashed_password = get_password_hash(user.password)
     verification_token = str(uuid.uuid4())
-    
+
     user_document = {
         "_id": user.email,
         "email": user.email,
@@ -86,9 +85,9 @@ async def create_user(
         "verification_token": verification_token,
         "created_at": datetime.utcnow()
     }
-    
+
     await db.users.insert_one(user_document)
-    
+
     frontend_url = os.environ.get("FRONTEND_URL", "https://allocash.netlify.app")
     verification_url = f"{frontend_url}/verify-email?token={verification_token}"
 
@@ -98,10 +97,14 @@ async def create_user(
         template_body={"verification_url": verification_url},
         subtype=MessageType.html
     )
-    
-    background_tasks.add_task(fm.send_message, message, template_name="verification.html")
-    
+
+    try:  #❗ Add error logging for Render
+        background_tasks.add_task(fm.send_message, message, template_name="verification.html")
+    except Exception as e:
+        logging.error(f"Failed to send verification email: {e}")  #❗
+
     return {"message": "Signup successful. Please check your email to verify your account."}
+
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncIOMotorDatabase = Depends(get_database)):
@@ -112,22 +115,23 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     if not user.get("verified", False):
-          raise HTTPException(
-              status_code=status.HTTP_401_UNAUTHORIZED,
-              detail="Email not verified. Please check your inbox for a verification link.",
-          )
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Email not verified. Please check your inbox for a verification link.",
+        )
 
     access_token = create_access_token(data={"sub": user["_id"]})
     refresh_token = create_refresh_token(data={"sub": user["_id"]})
     return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
 
+
 @router.post("/google-login", response_model=Token)
 async def google_login(request: GoogleLoginRequest, db: AsyncIOMotorDatabase = Depends(get_database)):
     try:
         id_info = id_token.verify_oauth2_token(
-            request.id_token, 
+            request.id_token,
             google_requests.Request(),
             os.environ.get("GOOGLE_CLIENT_ID")
         )
@@ -136,7 +140,7 @@ async def google_login(request: GoogleLoginRequest, db: AsyncIOMotorDatabase = D
         raise HTTPException(status_code=401, detail="Invalid Google token")
 
     user = await db.users.find_one({"_id": email})
-    
+
     if not user:
         new_user_doc = {
             "_id": email,
@@ -157,6 +161,7 @@ async def google_login(request: GoogleLoginRequest, db: AsyncIOMotorDatabase = D
     refresh_token = create_refresh_token(data={"sub": email})
     return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
 
+
 @router.post("/token/refresh", response_model=Token)
 async def refresh_access_token(request: RefreshTokenRequest, db: AsyncIOMotorDatabase = Depends(get_database)):
     credentials_exception = HTTPException(
@@ -165,13 +170,13 @@ async def refresh_access_token(request: RefreshTokenRequest, db: AsyncIOMotorDat
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(request.refresh_token, os.environ.get("SECRET_KEY"), algorithms=["HS256"])
+        payload = jwt.decode(request.refresh_token, SECRET_KEY, algorithms=["HS256"])  #❗ Use shared SECRET_KEY
         if payload.get("scope") != "refresh_token":
             raise credentials_exception
         user_id = payload.get("sub")
         if user_id is None:
             raise credentials_exception
-            
+
         user = await db.users.find_one({"_id": user_id})
         if user is None:
             raise credentials_exception
@@ -189,28 +194,31 @@ async def forgot_password(
     request: ForgotPasswordRequest,
     background_tasks: BackgroundTasks,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    fm: FastMail = Depends(get_fastmail) # ⚠️ FIX: Inject the FastMail dependency
+    fm: FastMail = Depends(get_fastmail)
 ):
     user = await db.users.find_one({"_id": request.email})
     if user:
         token = secrets.token_urlsafe(32)
         expiry_date = datetime.utcnow() + timedelta(hours=1)
-        
+
         await db.users.update_one(
             {"_id": request.email},
             {"$set": {"reset_password_token": token, "reset_token_expires": expiry_date}}
         )
 
         reset_url = f"https://allocash.netlify.app/reset-password?token={token}"
-        
+
         message = MessageSchema(
             subject="Your Password Reset Link for Budget Planner",
             recipients=[request.email],
             template_body={"reset_url": reset_url},
             subtype=MessageType.html
         )
-        
-        background_tasks.add_task(fm.send_message, message, template_name="password_reset.html")
+
+        try:  #❗ Add error logging for Render
+            background_tasks.add_task(fm.send_message, message, template_name="password_reset.html")
+        except Exception as e:
+            logging.error(f"Failed to send password reset email: {e}")  #❗
 
     return {"message": "If an account with this email exists, a password reset link has been sent."}
 
@@ -222,7 +230,7 @@ async def reset_password(request: ResetPasswordRequest, db: AsyncIOMotorDatabase
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Password must be at least 8 characters long",
         )
-        
+
     user = await db.users.find_one({
         "reset_password_token": request.token,
         "reset_token_expires": {"$gt": datetime.utcnow()}
@@ -230,9 +238,9 @@ async def reset_password(request: ResetPasswordRequest, db: AsyncIOMotorDatabase
 
     if not user:
         raise HTTPException(status_code=400, detail="Invalid or expired password reset token.")
-    
+
     new_hashed_password = get_password_hash(request.new_password)
-    
+
     await db.users.update_one(
         {"_id": user["_id"]},
         {
@@ -240,7 +248,7 @@ async def reset_password(request: ResetPasswordRequest, db: AsyncIOMotorDatabase
             "$unset": {"reset_password_token": "", "reset_token_expires": ""}
         }
     )
-    
+
     return {"message": "Password has been reset successfully. You can now log in."}
 
 
@@ -254,18 +262,19 @@ async def verify_email(token: str, db: AsyncIOMotorDatabase = Depends(get_databa
         raise HTTPException(status_code=400, detail="Invalid or expired verification token.")
     return {"message": "Email verified successfully. You can now log in."}
 
+
 @router.post("/resend-verification", status_code=status.HTTP_200_OK)
 async def resend_verification_email(
     request: ResendVerificationRequest,
     background_tasks: BackgroundTasks,
     db: AsyncIOMotorDatabase = Depends(get_database),
-    fm: FastMail = Depends(get_fastmail) # ⚠️ FIX: Inject the FastMail dependency
+    fm: FastMail = Depends(get_fastmail)
 ):
     user = await db.users.find_one({"_id": request.email})
 
     if user and not user.get("verified", False):
         verification_token = str(uuid.uuid4())
-        
+
         await db.users.update_one(
             {"_id": request.email},
             {"$set": {"verification_token": verification_token}}
@@ -280,10 +289,14 @@ async def resend_verification_email(
             template_body={"verification_url": verification_url},
             subtype=MessageType.html
         )
-        
-        background_tasks.add_task(fm.send_message, message, template_name="verification.html")
+
+        try:  #❗ Add error logging for Render
+            background_tasks.add_task(fm.send_message, message, template_name="verification.html")
+        except Exception as e:
+            logging.error(f"Failed to send resend-verification email: {e}")  #❗
 
     return {"message": "If an unverified account with this email exists, a new verification link has been sent."}
+
 
 @router.delete("/me", status_code=status.HTTP_200_OK)
 async def delete_current_user(
@@ -296,9 +309,9 @@ async def delete_current_user(
     """
     await db.transactions.delete_many({"user_id": user_id})
     await db.accounts.delete_many({"user_id": user_id})
-    
+
     result = await db.users.delete_one({"_id": user_id})
-    
+
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="User not found.")
 
