@@ -12,7 +12,7 @@ const AuthCallbackPage = () => {
 
     useEffect(() => {
         const handleAuthCallback = async () => {
-            // ✨ FIX: Parse the URL fragment (#) instead of search query (?)
+            // FIX: Parse the URL fragment (#) instead of search query (?)
             const params = new URLSearchParams(location.hash.substring(1));
             const idToken = params.get('id_token');
 

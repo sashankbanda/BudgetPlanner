@@ -12,9 +12,10 @@ import api from '../services/api';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
 import { cn } from '../lib/utils';
-import { Checkbox } from '../components/ui/checkbox';
-// ✨ FIX: Import the new component
+// FIX: Import the new components
 import PasswordRequirements from '../components/PasswordRequirements';
+import VerificationBanner from '../components/VerificationBanner';
+import { Checkbox } from '../components/ui/checkbox';
 
 const GoogleIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -99,6 +100,7 @@ const AuthPage = () => {
     const [showLoginPassword, setShowLoginPassword] = useState(false);
     const [showSignupPassword, setShowSignupPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [unverifiedEmail, setUnverifiedEmail] = useState('');
 
     const [errors, setErrors] = useState({});
 
@@ -119,12 +121,18 @@ const AuthPage = () => {
     const handleLogin = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setUnverifiedEmail('');
         try {
             await api.auth.login(loginEmail, loginPassword, rememberMe);
             toast({ title: "Success", description: "Logged in successfully!" });
             navigate('/');
         } catch (error) {
-            toast({ title: "Login Failed", description: error.message, variant: "destructive" });
+            if (error.message.includes("Email not verified")) {
+                setUnverifiedEmail(loginEmail);
+                toast({ title: "Login Failed", description: error.message, variant: "destructive" });
+            } else {
+                toast({ title: "Login Failed", description: error.message, variant: "destructive" });
+            }
         } finally {
             setLoading(false);
         }
@@ -140,7 +148,7 @@ const AuthPage = () => {
         try {
             const response = await api.auth.signup(signupEmail, signupPassword);
             toast({ title: "Welcome!", description: response.message || "Account created successfully. Please check your email to verify your account." });
-            setActiveTab('login'); 
+            setActiveTab('login');
         } catch (error) {
             toast({ title: "Signup Failed", description: error.message, variant: "destructive" });
         } finally {
@@ -182,40 +190,43 @@ const AuthPage = () => {
                     <Card className="glass-card border-0">
                         <CardHeader><CardTitle className="electric-accent text-center text-2xl">Welcome Back</CardTitle></CardHeader>
                         <CardContent>
-                            <form onSubmit={handleLogin} className="space-y-4">
-                                <div>
-                                    <Label htmlFor="login-email" className="text-gray-300">Email</Label>
-                                    <Input id="login-email" type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required className="glass-input" />
-                                </div>
-                                <div>
-                                    <div className="flex justify-between items-center">
-                                        <Label htmlFor="login-password" className="text-gray-300">Password</Label>
-                                        <ForgotPasswordDialog />
+                            <div className="flex flex-col gap-4">
+                                {unverifiedEmail && <VerificationBanner email={unverifiedEmail} />}
+                                <form onSubmit={handleLogin} className="space-y-4">
+                                    <div>
+                                        <Label htmlFor="login-email" className="text-gray-300">Email</Label>
+                                        <Input id="login-email" type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required className="glass-input" />
                                     </div>
-                                    <div className="relative">
-                                        <Input id="login-password" type={showLoginPassword ? "text" : "password"} value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required className="glass-input pr-10" />
-                                        <button type="button" onClick={() => setShowLoginPassword(!showLoginPassword)} className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white">
-                                            {showLoginPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                        </button>
+                                    <div>
+                                        <div className="flex justify-between items-center">
+                                            <Label htmlFor="login-password" className="text-gray-300">Password</Label>
+                                            <ForgotPasswordDialog />
+                                        </div>
+                                        <div className="relative">
+                                            <Input id="login-password" type={showLoginPassword ? "text" : "password"} value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} required className="glass-input pr-10" />
+                                            <button type="button" onClick={() => setShowLoginPassword(!showLoginPassword)} className="absolute inset-y-0 right-0 px-3 flex items-center text-gray-400 hover:text-white">
+                                                {showLoginPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                            </button>
+                                        </div>
                                     </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Checkbox id="remember-me" checked={rememberMe} onCheckedChange={setRememberMe} className="border-gray-600 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500" />
+                                        <Label htmlFor="remember-me" className="text-sm font-medium leading-none text-gray-400">Remember me</Label>
+                                    </div>
+                                    <Button type="submit" className="w-full glass-button neon-glow" disabled={loading}>
+                                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Login
+                                    </Button>
+                                </form>
+                                <div className="relative my-6">
+                                    <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-gray-700"></span></div>
+                                    <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#191919] px-2 text-gray-400">Or continue with</span></div>
                                 </div>
-                                <div className="flex items-center space-x-2">
-                                    <Checkbox id="remember-me" checked={rememberMe} onCheckedChange={setRememberMe} className="border-gray-600 data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500" />
-                                    <Label htmlFor="remember-me" className="text-sm font-medium leading-none text-gray-400">Remember me</Label>
-                                </div>
-                                <Button type="submit" className="w-full glass-button neon-glow" disabled={loading}>
-                                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Login
+                                <Button variant="outline" className="w-full glass-button items-center gap-2" onClick={handleGoogleLogin}>
+                                    <GoogleIcon />
+                                    Sign in with Google
                                 </Button>
-                            </form>
-                            <div className="relative my-6">
-                                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-gray-700"></span></div>
-                                <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#191919] px-2 text-gray-400">Or continue with</span></div>
                             </div>
-                            <Button variant="outline" className="w-full glass-button items-center gap-2" onClick={handleGoogleLogin}>
-                                <GoogleIcon />
-                                Sign in with Google
-                            </Button>
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -239,7 +250,6 @@ const AuthPage = () => {
                                         </button>
                                     </div>
                                     <PasswordStrengthMeter password={signupPassword} />
-                                    {/* ✨ FIX: Add the requirements checklist component */}
                                     <PasswordRequirements password={signupPassword} />
                                     {errors.signupPassword && <p className="text-xs text-red-400 mt-1">{errors.signupPassword}</p>}
                                 </div>
