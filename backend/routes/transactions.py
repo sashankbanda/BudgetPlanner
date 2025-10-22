@@ -21,6 +21,7 @@ async def create_transaction(
     if not account:
         raise HTTPException(status_code=404, detail="Account not found for this user")
 
+    # The TransactionCreate validator now handles cleaning/validation for person/group.
     transaction = Transaction.from_create(transaction_data, user_id)
     await db.transactions.insert_one(transaction.dict())
     return transaction
@@ -41,6 +42,8 @@ async def update_transaction(
         account = await db.accounts.find_one({"id": update_dict["account_id"], "user_id": user_id})
         if not account:
             raise HTTPException(status_code=404, detail="New account not found for this user")
+
+    # The TransactionUpdate model now handles cleaning/validation for person/group fields.
 
     if "date" in update_dict:
         update_dict["month"] = update_dict["date"][:7]
@@ -72,7 +75,9 @@ async def get_transactions(
     try:
         query_filter = {"user_id": user_id}
 
-        query_filter["account_id"] = {"$exists": True}
+        # --- FIX: Removed redundant check
+        # query_filter["account_id"] = {"$exists": True} 
+        # --------------------------------
 
         if account_id:
             query_filter["account_id"] = account_id

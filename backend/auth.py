@@ -10,7 +10,13 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-SECRET_KEY = os.environ.get("SECRET_KEY", "a_very_secret_key_for_dev")
+
+# --- FIX: Insecure Default Removed & Check Added ---
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY environment variable is not set. This is required for secure JWT operations.")
+# ---------------------------------------------------
+
 ALGORITHM = "HS256"
 
 # Token Lifespans
@@ -31,14 +37,14 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 def create_access_token(data: dict):
-    """Creates a short-lived access token."""
+    """Creates a short-lived access token. Data must contain 'sub' (user_id)."""
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire, "scope": "access_token"})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 def create_refresh_token(data: dict):
-    """Creates a long-lived refresh token."""
+    """Creates a long-lived refresh token. Data must contain 'sub' (user_id)."""
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire, "scope": "refresh_token"})

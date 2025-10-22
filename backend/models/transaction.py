@@ -35,6 +35,22 @@ class TransactionCreate(TransactionBase):
         except ValueError:
             raise ValueError('Date must be in YYYY-MM-DD format')
         return v
+        
+    # --- FIX: Clean and validate person/group fields on creation ---
+    @validator('person', pre=True)
+    def clean_person(cls, v):
+        if v is not None:
+            stripped = v.strip()
+            return stripped if stripped else None
+        return v
+        
+    @validator('group_name', pre=True)
+    def clean_group_name(cls, v):
+        if v is not None:
+            stripped = v.strip()
+            return stripped if stripped else None
+        return v
+    # --------------------------------------------------------------
 
 class TransactionUpdate(BaseModel):
     type: Optional[Literal["income", "expense"]] = None
@@ -68,6 +84,22 @@ class TransactionUpdate(BaseModel):
             except ValueError:
                 raise ValueError('Date must be in YYYY-MM-DD format')
         return v
+
+    # --- FIX: Clean and validate person/group fields on update ---
+    @validator('person', pre=True)
+    def clean_person_update(cls, v):
+        if v is not None:
+            stripped = v.strip()
+            return stripped if stripped else None
+        return v
+        
+    @validator('group_name', pre=True)
+    def clean_group_name_update(cls, v):
+        if v is not None:
+            stripped = v.strip()
+            return stripped if stripped else None
+        return v
+    # -------------------------------------------------------------
 
 class Transaction(TransactionBase):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

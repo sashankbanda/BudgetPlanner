@@ -42,6 +42,9 @@ async def lifespan(app: FastAPI):
 
         # Index for accounts
         await db.accounts.create_index([("user_id", 1)])
+        # --- FIX: Added compound index for faster account lookup by ID/User ---
+        await db.accounts.create_index([("user_id", 1), ("id", 1)])
+        # ---------------------------------------------------------------------
         
         # REMOVED: Index for groups
 
