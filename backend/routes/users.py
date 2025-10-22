@@ -7,7 +7,7 @@ from auth import (
     verify_password,
     create_access_token,
     create_refresh_token,
-    get_current_user_id, # Ensure this is imported
+    get_current_user_id,
 )
 from motor.motor_asyncio import AsyncIOMotorDatabase
 import logging
@@ -23,6 +23,21 @@ from fastapi_mail import FastMail, MessageSchema, MessageType
 from email_service import conf
 
 router = APIRouter(prefix="/users", tags=["users"])
+
+#❗ logger setup
+logger = logging.getLogger(__name__)
+
+def get_fastmail():
+    return FastMail(conf)
+
+#❗ wrapper to log email failures
+async def safe_send_email(fm, message, template_name=None):
+    try:
+        await fm.send_message(message, template_name=template_name)
+        logger.info(f"Email sent successfully to {message.recipients}")
+    except Exception as e:
+        logger.error(f"Failed to send email to {message.recipients}: {e}")
+
 
 class UserCreate(BaseModel):
     email: EmailStr
@@ -46,13 +61,17 @@ class ResetPasswordRequest(BaseModel):
 class GoogleLoginRequest(BaseModel):
     id_token: str
 
-# ADD THIS NEW CLASS
 class ResendVerificationRequest(BaseModel):
     email: EmailStr
 
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
-async def create_user(user: UserCreate, background_tasks: BackgroundTasks, db: AsyncIOMotorDatabase = Depends(get_database)):
+async def create_user(
+    user: UserCreate, 
+    background_tasks: BackgroundTasks, 
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    fm: FastMail = Depends(get_fastmail)
+):
     if len(user.password) < 8:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -80,7 +99,6 @@ async def create_user(user: UserCreate, background_tasks: BackgroundTasks, db: A
     
     await db.users.insert_one(user_document)
     
-    # Use your frontend's URL. It's best to set this in your .env file.
     frontend_url = os.environ.get("FRONTEND_URL", "https://allocash.netlify.app")
     verification_url = f"{frontend_url}/verify-email?token={verification_token}"
 
@@ -91,11 +109,11 @@ async def create_user(user: UserCreate, background_tasks: BackgroundTasks, db: A
         subtype=MessageType.html
     )
     
-    fm = FastMail(conf)
-    # Use a background task to send the email without blocking the response
-    background_tasks.add_task(fm.send_message, message, template_name="verification.html")
+    #❗ log-safe email sending
+    background_tasks.add_task(safe_send_email, fm, message, "verification.html")
     
     return {"message": "Signup successful. Please check your email to verify your account."}
+
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncIOMotorDatabase = Depends(get_database)):
@@ -108,14 +126,15 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         )
     
     if not user.get("verified", False):
-         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email not verified. Please check your inbox for a verification link.",
-        )
+          raise HTTPException(
+              status_code=status.HTTP_401_UNAUTHORIZED,
+              detail="Email not verified. Please check your inbox for a verification link.",
+          )
 
     access_token = create_access_token(data={"sub": user["_id"]})
     refresh_token = create_refresh_token(data={"sub": user["_id"]})
     return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
+
 
 @router.post("/google-login", response_model=Token)
 async def google_login(request: GoogleLoginRequest, db: AsyncIOMotorDatabase = Depends(get_database)):
@@ -151,6 +170,7 @@ async def google_login(request: GoogleLoginRequest, db: AsyncIOMotorDatabase = D
     refresh_token = create_refresh_token(data={"sub": email})
     return {"access_token": access_token, "token_type": "bearer", "refresh_token": refresh_token}
 
+
 @router.post("/token/refresh", response_model=Token)
 async def refresh_access_token(request: RefreshTokenRequest, db: AsyncIOMotorDatabase = Depends(get_database)):
     credentials_exception = HTTPException(
@@ -182,7 +202,8 @@ async def refresh_access_token(request: RefreshTokenRequest, db: AsyncIOMotorDat
 async def forgot_password(
     request: ForgotPasswordRequest,
     background_tasks: BackgroundTasks,
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    fm: FastMail = Depends(get_fastmail)
 ):
     user = await db.users.find_one({"_id": request.email})
     if user:
@@ -203,8 +224,8 @@ async def forgot_password(
             subtype=MessageType.html
         )
         
-        fm = FastMail(conf)
-        background_tasks.add_task(fm.send_message, message, template_name="password_reset.html")
+        #❗ log-safe email sending
+        background_tasks.add_task(safe_send_email, fm, message, "password_reset.html")
 
     return {"message": "If an account with this email exists, a password reset link has been sent."}
 
@@ -248,20 +269,19 @@ async def verify_email(token: str, db: AsyncIOMotorDatabase = Depends(get_databa
         raise HTTPException(status_code=400, detail="Invalid or expired verification token.")
     return {"message": "Email verified successfully. You can now log in."}
 
-# ADD THIS NEW ENDPOINT
+
 @router.post("/resend-verification", status_code=status.HTTP_200_OK)
 async def resend_verification_email(
     request: ResendVerificationRequest,
     background_tasks: BackgroundTasks,
-    db: AsyncIOMotorDatabase = Depends(get_database)
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    fm: FastMail = Depends(get_fastmail)
 ):
     user = await db.users.find_one({"_id": request.email})
 
-    # Only proceed if the user exists and is NOT verified
     if user and not user.get("verified", False):
         verification_token = str(uuid.uuid4())
         
-        # Update the user's token in the DB
         await db.users.update_one(
             {"_id": request.email},
             {"$set": {"verification_token": verification_token}}
@@ -277,13 +297,12 @@ async def resend_verification_email(
             subtype=MessageType.html
         )
         
-        fm = FastMail(conf)
-        background_tasks.add_task(fm.send_message, message, template_name="verification.html")
+        #❗ log-safe email sending
+        background_tasks.add_task(safe_send_email, fm, message, "verification.html")
 
-    # Always return the same message to prevent email enumeration attacks
     return {"message": "If an unverified account with this email exists, a new verification link has been sent."}
 
-# ADD THIS to delete account completely
+
 @router.delete("/me", status_code=status.HTTP_200_OK)
 async def delete_current_user(
     user_id: str = Depends(get_current_user_id),
@@ -293,15 +312,41 @@ async def delete_current_user(
     Permanently deletes the current user and all their associated data.
     This action is irreversible.
     """
-    # Delete all data associated with the user first
     await db.transactions.delete_many({"user_id": user_id})
     await db.accounts.delete_many({"user_id": user_id})
-    await db.groups.delete_many({"user_id": user_id})
     
-    # Finally, delete the user document itself
     result = await db.users.delete_one({"_id": user_id})
     
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="User not found.")
 
     return {"message": "User account and all data have been permanently deleted."}
+class TestEmailRequest(BaseModel):
+    email: EmailStr
+    subject: str = "Test Email from Budget Planner"
+    body: str = "This is a test email to check your SMTP configuration."
+
+@router.post("/test-email", status_code=status.HTTP_200_OK)
+async def send_test_email(
+    request: TestEmailRequest,
+    fm: FastMail = Depends(get_fastmail)
+):
+    """
+    Sends a plain-text test email to verify that the SMTP server is working.
+    """
+    message = MessageSchema(
+        subject=request.subject,
+        recipients=[request.email],
+        body=request.body,
+        subtype=MessageType.plain
+    )
+
+    try:
+        await fm.send_message(message)
+        return {"message": f"Test email successfully sent to {request.email}"}
+    except Exception as e:
+        logger.error(f"Failed to send test email to {request.email}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to send test email: {e}"
+        )
