@@ -35,6 +35,7 @@ apiClient.interceptors.request.use(
         '/users/forgot-password',
         '/users/reset-password',
         '/users/verify-email',
+        '/users/resend-verification', // FIX: Add resend-verification to public paths
     ];
 
     const isPublicPath = publicPaths.some(path => config.url.startsWith(path));
