@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertCircle, XCircle, CheckCircle, Loader2 } from 'lucide-react'; // ADDED Loader2
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import api from '../services/api';
 import { useToast } from '../hooks/use-toast';
@@ -14,7 +14,7 @@ const VerificationBanner = ({ email, message = "Please verify your email address
             await api.auth.resendVerification(email);
             toast({
                 title: "Success",
-                description: "A new verification link has been sent to your email.",
+                description: "A new verification link has been sent to your email. Please check your inbox and spam folder.",
                 variant: "success",
             });
         } catch (error) {
