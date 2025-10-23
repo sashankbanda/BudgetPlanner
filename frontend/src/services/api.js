@@ -28,6 +28,21 @@ const isTokenExpired = (token) => {
 
 apiClient.interceptors.request.use(
   async (config) => {
+    const publicPaths = [
+        '/users/token',
+        '/users/signup',
+        '/users/google-login',
+        '/users/forgot-password',
+        '/users/reset-password',
+        '/users/verify-email',
+    ];
+
+    const isPublicPath = publicPaths.some(path => config.url.startsWith(path));
+
+    if (isPublicPath) {
+        return config;
+    }
+
     let accessToken = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
     
     if (isTokenExpired(accessToken)) {
